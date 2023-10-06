@@ -4,6 +4,20 @@ use crate::ffi;
 
 pub type Result<T, E = D3xxError> = std::result::Result<T, E>;
 
+/// Represents an error returned by the D3XX API.
+///
+/// Codes 1 through 32 are defined as error by the API.
+///
+/// If necessary, a [`D3xxError`] may be constructed from an error code:
+///
+/// ```
+/// use d3xx::D3xxError;
+///
+/// let err = D3xxError::from(1);
+/// assert_eq!(err, D3xxError::InvalidHandle);
+/// ```
+///
+/// Note that the `from` method will panic if the given code is invalid.
 #[allow(unused)]
 #[derive(thiserror::Error, Debug, Clone, Copy)]
 #[repr(u8)]
@@ -45,6 +59,7 @@ pub enum D3xxError {
 }
 
 impl D3xxError {
+    /// Get the error code as an integer.
     pub fn code(&self) -> u8 {
         *self as u8
     }

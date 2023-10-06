@@ -39,7 +39,7 @@ impl GpioExt for Device {
     fn enable_gpio(&self, gpio: Gpio, direction: Direction) -> Result<()> {
         try_d3xx!(unsafe {
             ffi::FT_EnableGPIO(
-                self.handle,
+                self.handle(),
                 gpio as u32,
                 (direction as u32) << (gpio as u32),
             )
@@ -48,13 +48,13 @@ impl GpioExt for Device {
 
     fn write_gpio(&self, gpio: Gpio, level: Level) -> Result<()> {
         try_d3xx!(unsafe {
-            ffi::FT_WriteGPIO(self.handle, gpio as u32, (level as u32) << (gpio as u32))
+            ffi::FT_WriteGPIO(self.handle(), gpio as u32, (level as u32) << (gpio as u32))
         })
     }
 
     fn read_gpio(&self, gpio: Gpio) -> Result<Level> {
         let mut value: u32 = 0;
-        try_d3xx!(unsafe { ffi::FT_ReadGPIO(self.handle, &mut value as *mut u32) })?;
+        try_d3xx!(unsafe { ffi::FT_ReadGPIO(self.handle(), &mut value as *mut u32) })?;
         Ok(match (value >> (gpio as u32)) & 1 {
             0 => Level::Low,
             1 => Level::High,

@@ -116,7 +116,7 @@ impl StreamPipes {
         Self::default()
     }
 
-    pub fn with_pipe(&mut self, pipe: Pipe, stream_size: usize) -> &mut Self {
+    pub fn with_pipe(mut self, pipe: Pipe, stream_size: usize) -> Self {
         self.pipes.insert((pipe.into(), stream_size));
         self
     }
