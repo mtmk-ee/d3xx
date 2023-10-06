@@ -1,13 +1,13 @@
 use std::{
-    ffi::{c_uchar, c_ulong, c_void, CString, c_ushort},
+    ffi::{c_uchar, c_ulong, c_ushort, c_void, CString},
     time::Duration,
 };
 
-use crate::{ffi, try_d3xx, D3xxError, Pipe, Result, StreamPipes};
+use crate::{ffi, overlapped::Overlapped, try_d3xx, D3xxError, Pipe, Result, StreamPipes};
 
 type PhantomUnsync = std::marker::PhantomData<std::cell::Cell<()>>;
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug)]
 pub struct Device {
     pub(crate) handle: ffi::FT_HANDLE,
     serial_number: String,
@@ -46,40 +46,44 @@ impl Device {
         &self.serial_number
     }
 
+    /// Write to the specified pipe.
+    ///
+    /// This method will block until the transfer is complete.
+    ///
+    /// On success the number of bytes written is returned.
     pub fn write(&self, pipe: Pipe, buf: &[u8]) -> Result<usize> {
-        if !pipe.is_out() {
-            panic!("attempted to write to an input pipe");
-        }
-        let mut bytes_written: c_ulong = 0;
-        try_d3xx!(unsafe {
-            ffi::FT_WritePipe(
-                self.handle,
-                pipe as c_uchar,
-                buf.as_ptr() as *mut c_uchar,
-                buf.len() as c_ulong,
-                &mut bytes_written,
-                std::ptr::null_mut(),
-            )
-        })?;
-        Ok(bytes_written as usize)
+        let res = ffi::util::write_pipe(self.handle, pipe as u8, buf);
+        self.wrap_pipe_io_abort(pipe, res)
     }
 
+    /// Asynchronous write to the specified pipe.
+    ///
+    /// On success the number of bytes written is returned.
+    pub async fn write_async<'a>(&'a self, pipe: Pipe, buf: &[u8]) -> Result<usize> {
+        let mut overlapped = Overlapped::new(self)?;
+        let res = ffi::util::write_pipe_async(self.handle, pipe as u8, buf, overlapped.inner_mut());
+        self.wrap_pipe_io_abort(pipe, res)?;
+        overlapped.await
+    }
+
+    /// Read from the specified pipe into the given buffer.
+    ///
+    /// This method will block until the transfer is complete.
+    ///
+    /// On success the number of bytes read is returned.
     pub fn read(&self, pipe: Pipe, buf: &mut [u8]) -> Result<usize> {
-        if !pipe.is_in() {
-            panic!("attempted to read from an output pipe");
-        }
-        let mut bytes_read: c_ulong = 0;
-        try_d3xx!(unsafe {
-            ffi::FT_ReadPipe(
-                self.handle,
-                pipe as c_uchar,
-                buf.as_mut_ptr() as *mut c_uchar,
-                buf.len() as c_ulong,
-                &mut bytes_read,
-                std::ptr::null_mut(),
-            )
-        })?;
-        Ok(bytes_read as usize)
+        let res = ffi::util::read_pipe(self.handle, pipe as u8, buf);
+        self.wrap_pipe_io_abort(pipe, res)
+    }
+
+    /// Asynchronous read from the specified pipe into the given buffer.
+    ///
+    /// On success the number of bytes read is returned.
+    pub async fn read_async(&self, pipe: Pipe, buf: &mut [u8]) -> Result<usize> {
+        let mut overlapped = Overlapped::new(self)?;
+        let res = ffi::util::read_pipe_async(self.handle, pipe as u8, buf, overlapped.inner_mut());
+        self.wrap_pipe_io_abort(pipe, res)?;
+        overlapped.await
     }
 
     pub fn set_stream_pipes(&self, pipes: StreamPipes) -> Result<()> {
@@ -102,6 +106,14 @@ impl Device {
 
     pub fn abort_pipe(&self, pipe: Pipe) -> Result<()> {
         try_d3xx!(unsafe { ffi::FT_AbortPipe(self.handle, pipe as c_uchar) })
+    }
+
+    fn wrap_pipe_io_abort<T>(&self, pipe: Pipe, res: Result<T>) -> Result<T> {
+        res.map_err(|e| {
+            // Pipe must be aborted on failure (D3XX Programmer's Guide pg. 15)
+            let _ = self.abort_pipe(pipe);
+            e
+        })
     }
 
     pub fn pipe_timeout(&self, pipe: Pipe) -> Result<Duration> {
@@ -133,7 +145,6 @@ impl Device {
         Ok((vid as usize, pid as usize))
     }
 }
-
 
 impl Drop for Device {
     fn drop(&mut self) {

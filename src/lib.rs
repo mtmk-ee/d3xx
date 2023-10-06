@@ -2,6 +2,7 @@ mod device;
 mod error;
 mod ffi;
 pub mod gpio;
+mod overlapped;
 mod pipe;
 mod prelude;
 mod scan;

@@ -3,7 +3,14 @@
 #![allow(non_snake_case)]
 #![allow(unused)]
 
-use std::sync::Mutex;
+pub(crate) mod util;
+
+use std::{
+    ffi::{c_uchar, c_ulong, c_void},
+    sync::Mutex,
+};
+
+use crate::{try_d3xx, Result};
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
