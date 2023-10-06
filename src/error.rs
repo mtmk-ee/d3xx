@@ -8,7 +8,7 @@ pub type Result<T, E = D3xxError> = std::result::Result<T, E>;
 #[derive(thiserror::Error, Debug, Clone, Copy)]
 #[repr(u8)]
 pub enum D3xxError {
-    InvalidHandle,
+    InvalidHandle = 1,
     DeviceNotFound,
     DeviceNotOpened,
     IoError,
