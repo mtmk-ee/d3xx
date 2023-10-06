@@ -10,8 +10,9 @@ use crate::{
 /// This structure is returned by [`list_devices`].
 pub struct DeviceInfo {
     flags: u32,
-    device_type: u32,
-    id: u32,
+    device_type: DeviceType,
+    vid: u16,
+    pid: u16,
     location_id: u32,
     serial_number: String,
     description: String,
@@ -19,7 +20,6 @@ pub struct DeviceInfo {
 }
 
 impl DeviceInfo {
-
     /// Attempt to open the device.
     ///
     /// This is a convenience method that calls `Device::open` with the device's serial number.
@@ -48,24 +48,18 @@ impl DeviceInfo {
     }
 
     /// Get the device's type.
-    pub fn device_type(&self) -> u32 {
+    pub fn device_type(&self) -> DeviceType {
         self.device_type
     }
 
     /// Get the device's vendor ID.
     pub fn vid(&self) -> u16 {
-        (self.id >> 16) as u16
+        self.vid
     }
 
     /// Get the device's product ID.
     pub fn pid(&self) -> u16 {
-        (self.id & 0xFFFF) as u16
-    }
-
-
-    /// Get the device's ID (VID and PID combined)
-    pub fn id(&self) -> u32 {
-        self.id
+        self.pid
     }
 
     /// Get the device's location ID.
@@ -102,8 +96,9 @@ impl From<ffi::FT_DEVICE_LIST_INFO_NODE> for DeviceInfo {
             .into_owned();
         Self {
             flags: info.Flags,
-            device_type: info.Type,
-            id: info.ID,
+            device_type: DeviceType::from(info.Type),
+            vid: (info.ID >> 16) as u16,
+            pid: (info.ID & 0xffff) as u16,
             location_id: info.LocId,
             serial_number,
             description,
@@ -112,6 +107,23 @@ impl From<ffi::FT_DEVICE_LIST_INFO_NODE> for DeviceInfo {
     }
 }
 
+/// Represents the type of FT60x device.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum DeviceType {
+    Unknown,
+    FT600,
+    FT601,
+}
+
+impl From<u32> for DeviceType {
+    fn from(value: u32) -> Self {
+        match value as i32 {
+            ffi::_FT_DEVICE_FT_DEVICE_600 => Self::FT600,
+            ffi::_FT_DEVICE_FT_DEVICE_601 => Self::FT601,
+            _ => Self::Unknown,
+        }
+    }
+}
 
 /// List all connected FT60x devices.
 pub fn list_devices() -> Result<Vec<DeviceInfo>> {
