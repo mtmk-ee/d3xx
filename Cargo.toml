@@ -2,6 +2,16 @@
 name = "d3xx"
 version = "0.1.0"
 edition = "2021"
+authors = ["Mitchell Matsumori-Kelly"]
+
+categories = ["api-bindings", "hardware-support"]
+description = "Rust bindings for the FTDI D3XX library"
+keywords = ["ftdi", "d3xx", "usb", "ft60x"]
+license = "MIT"
+license-file = "LICENSE"
+readme = "README.md"
+repository = "https://github.com/mtmk-ee/d3xx"
+homepage = "https://github.com/mtmk-ee/d3xx"
 
 [dependencies]
 thiserror = "1.0.49"
