@@ -1,8 +1,8 @@
-use std::collections::HashSet;
+use std::collections::HashMap;
 
 use crate::{ffi, D3xxError, Result};
 
-
+/// Identifies a unique read/write pipe on a device.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 #[repr(u8)]
 pub enum Pipe {
@@ -57,11 +57,13 @@ impl TryFrom<i32> for PipeType {
 }
 
 impl Pipe {
+    /// Check if the pipe is an input (read) pipe.
     #[inline]
     pub fn is_in(self) -> bool {
         !self.is_out()
     }
 
+    /// Check if the pipe is an output (write) pipe.
     #[inline]
     pub fn is_out(self) -> bool {
         (self as u8) & 0x80 == 0
@@ -76,18 +78,22 @@ pub struct PipeInfo {
 }
 
 impl PipeInfo {
+    /// The type of pipe.
     pub fn pipe_type(&self) -> PipeType {
         self.pipe_type
     }
 
+    /// The pipe identifier.
     pub fn pipe(&self) -> Pipe {
         self.pipe
     }
 
+    /// The maximum packet size in bytes.
     pub fn max_packet_size(&self) -> usize {
         self.max_packet_size
     }
 
+    /// The polling interval in milliseconds.
     pub fn interval(&self) -> u8 {
         self.interval
     }
@@ -106,33 +112,67 @@ impl TryFrom<ffi::FT_PIPE_INFORMATION> for PipeInfo {
     }
 }
 
+/// A set of pipes to be used for stream transfers.
+///
+/// # Example
+///
+/// ```no_run
+/// use d3xx::{Device, Pipe, StreamPipes};
+///
+/// let device = Device::open("ABC123").unwrap();
+///
+/// // Disable streaming on all pipes
+/// device.set_stream_pipes(StreamPipes::default()).unwrap();
+///
+/// // Enable streaming on input pipe 1 with a stream size of 1024 bytes
+/// device.set_stream_pipes(
+///    StreamPipes::default().with_pipe(Pipe::In1, 1024)
+/// ).unwrap();
+///
+/// // Enable streaming on several pipes
+/// device.set_stream_pipes(
+///   StreamPipes::default()
+///     .with_pipe(Pipe::In1, 1024)
+///     .with_pipe(Pipe::In2, 1024)
+///     .with_pipe(Pipe::Out1, 1024)
+/// ).unwrap();
+/// ```
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct StreamPipes {
-    pipes: HashSet<(Pipe, usize)>,
+    pipes: HashMap<Pipe, usize>,
 }
 
 impl StreamPipes {
+    /// Create a new empty set.
     pub fn none() -> Self {
         Self::default()
     }
 
+    /// Add a pipe to the set of stream pipes.
+    ///
+    /// If a pipe of the same variant already exists the stream size
+    /// will be updated.
     pub fn with_pipe(mut self, pipe: Pipe, stream_size: usize) -> Self {
-        self.pipes.insert((pipe.into(), stream_size));
+        self.pipes.insert(pipe.into(), stream_size);
         self
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&Pipe, &usize)> {
+        self.pipes.iter()
     }
 }
 
 impl Default for StreamPipes {
     fn default() -> Self {
         Self {
-            pipes: HashSet::new(),
+            pipes: HashMap::new(),
         }
     }
 }
 
 impl IntoIterator for StreamPipes {
     type Item = (Pipe, usize);
-    type IntoIter = std::collections::hash_set::IntoIter<Self::Item>;
+    type IntoIter = std::collections::hash_map::IntoIter<Pipe, usize>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.pipes.into_iter()
