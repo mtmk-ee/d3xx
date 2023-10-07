@@ -29,17 +29,17 @@ impl DeviceInfo {
 
     /// Check if the device is open, either by this process or another.
     pub fn is_open(&self) -> bool {
-        self.flags & ffi::_FT_FLAGS_FT_FLAGS_OPENED as u32 != 0
+        self.flags & ffi::FT_FLAGS::FT_FLAGS_OPENED as u32 != 0
     }
 
     /// Check if the device is a high-speed device.
     pub fn is_hispeed(&self) -> bool {
-        self.flags & ffi::_FT_FLAGS_FT_FLAGS_HISPEED as u32 != 0
+        self.flags & ffi::FT_FLAGS::FT_FLAGS_HISPEED as u32 != 0
     }
 
     /// Check if the device is a superspeed device.
     pub fn is_superspeed(&self) -> bool {
-        self.flags & ffi::_FT_FLAGS_FT_FLAGS_SUPERSPEED as u32 != 0
+        self.flags & ffi::FT_FLAGS::FT_FLAGS_SUPERSPEED as u32 != 0
     }
 
     /// Get the device's flags.
@@ -108,6 +108,7 @@ impl From<ffi::FT_DEVICE_LIST_INFO_NODE> for DeviceInfo {
 }
 
 /// Represents the type of FT60x device.
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum DeviceType {
     Unknown,
@@ -118,8 +119,8 @@ pub enum DeviceType {
 impl From<u32> for DeviceType {
     fn from(value: u32) -> Self {
         match value as i32 {
-            ffi::_FT_DEVICE_FT_DEVICE_600 => Self::FT600,
-            ffi::_FT_DEVICE_FT_DEVICE_601 => Self::FT601,
+            600 => Self::FT600,
+            601 => Self::FT601,
             _ => Self::Unknown,
         }
     }

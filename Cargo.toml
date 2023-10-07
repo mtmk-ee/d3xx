@@ -13,8 +13,11 @@ repository = "https://github.com/mtmk-ee/d3xx"
 homepage = "https://github.com/mtmk-ee/d3xx"
 
 [dependencies]
+libftd3xx-ffi = { version = "0.0.2", features = ["bindgen"] }
 thiserror = "1.0.49"
 
+[features]
+static = ["libftd3xx-ffi/static"]
 
 [build-dependencies]
 bindgen = "0.65.1"

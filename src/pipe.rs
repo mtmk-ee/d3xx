@@ -34,6 +34,9 @@ impl TryFrom<u8> for Pipe {
     }
 }
 
+/// The type of a pipe.
+///
+/// This is used to determine the type of transfer to use.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum PipeType {
     Control = 0,
@@ -42,16 +45,15 @@ pub enum PipeType {
     Interrupt = 3,
 }
 
-impl TryFrom<i32> for PipeType {
+impl TryFrom<ffi::FT_PIPE_TYPE> for PipeType {
     type Error = ();
 
-    fn try_from(value: i32) -> Result<Self, Self::Error> {
+    fn try_from(value: ffi::FT_PIPE_TYPE) -> Result<Self, Self::Error> {
         match value {
-            0 => Ok(PipeType::Control),
-            1 => Ok(PipeType::Isochronous),
-            2 => Ok(PipeType::Bulk),
-            3 => Ok(PipeType::Interrupt),
-            _ => Err(()),
+            ffi::FT_PIPE_TYPE::FTPipeTypeControl => Ok(PipeType::Control),
+            ffi::FT_PIPE_TYPE::FTPipeTypeIsochronous => Ok(PipeType::Isochronous),
+            ffi::FT_PIPE_TYPE::FTPipeTypeBulk => Ok(PipeType::Bulk),
+            ffi::FT_PIPE_TYPE::FTPipeTypeInterrupt => Ok(PipeType::Interrupt),
         }
     }
 }
@@ -70,6 +72,9 @@ impl Pipe {
     }
 }
 
+/// Information about a pipe on a device.
+///
+/// This is returned by [`Device::pipe_info`].
 pub struct PipeInfo {
     pipe_type: PipeType,
     pipe: Pipe,
