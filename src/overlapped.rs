@@ -34,7 +34,7 @@ impl<'a> Overlapped<'a> {
         // succeeded if we're here.
         let overlapped = unsafe { overlapped.assume_init() };
         Ok(Self {
-            device: &device,
+            device,
             overlapped,
         })
     }

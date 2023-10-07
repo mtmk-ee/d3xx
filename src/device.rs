@@ -58,7 +58,7 @@ impl Device {
             )
         })?;
         if handle.is_null() {
-            Err(crate::D3xxError::DeviceNotFound.into())
+            Err(crate::D3xxError::DeviceNotFound)
         } else {
             Ok(Self {
                 handle,

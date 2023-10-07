@@ -149,7 +149,7 @@ pub fn list_devices() -> Result<Vec<DeviceInfo>> {
 
     Ok(devices
         .into_iter()
-        .map(|info| DeviceInfo::from(info))
+        .map(DeviceInfo::from)
         .collect())
 }
 

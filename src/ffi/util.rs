@@ -15,7 +15,7 @@ pub fn write_pipe(handle: FT_HANDLE, pipe: u8, buf: &[u8]) -> Result<usize> {
     try_d3xx!(unsafe {
         FT_WritePipe(
             handle,
-            pipe as u8,
+            pipe,
             buf.as_ptr() as *mut c_uchar,
             buf.len() as c_ulong,
             &mut bytes_written as *mut c_ulong,
@@ -42,7 +42,7 @@ pub fn write_pipe_async(
     ignore_io_pending(try_d3xx!(unsafe {
         FT_WritePipe(
             handle,
-            pipe as u8,
+            pipe,
             buf.as_ptr() as *mut c_uchar,
             buf.len() as c_ulong,
             &mut bytes_written as *mut c_ulong,
@@ -88,7 +88,7 @@ pub fn read_pipe(handle: FT_HANDLE, pipe: u8, buf: &mut [u8]) -> Result<usize> {
     try_d3xx!(unsafe {
         FT_ReadPipe(
             handle,
-            pipe as u8,
+            pipe,
             buf.as_mut_ptr() as *mut c_uchar,
             buf.len() as c_ulong,
             &mut bytes_read as *mut c_ulong,
@@ -115,7 +115,7 @@ pub fn read_pipe_async(
     ignore_io_pending(try_d3xx!(unsafe {
         FT_ReadPipe(
             handle,
-            pipe as u8,
+            pipe,
             buf.as_mut_ptr() as *mut c_uchar,
             buf.len() as c_ulong,
             &mut bytes_read as *mut c_ulong,

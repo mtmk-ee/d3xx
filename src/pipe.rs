@@ -142,7 +142,7 @@ impl TryFrom<ffi::FT_PIPE_INFORMATION> for PipeInfo {
 ///     .with_pipe(Pipe::Out1, 1024)
 /// ).unwrap();
 /// ```
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
 pub struct StreamPipes {
     pipes: HashMap<Pipe, usize>,
 }
@@ -158,20 +158,12 @@ impl StreamPipes {
     /// If a pipe of the same variant already exists the stream size
     /// will be updated.
     pub fn with_pipe(mut self, pipe: Pipe, stream_size: usize) -> Self {
-        self.pipes.insert(pipe.into(), stream_size);
+        self.pipes.insert(pipe, stream_size);
         self
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (&Pipe, &usize)> {
         self.pipes.iter()
-    }
-}
-
-impl Default for StreamPipes {
-    fn default() -> Self {
-        Self {
-            pipes: HashMap::new(),
-        }
     }
 }
 
