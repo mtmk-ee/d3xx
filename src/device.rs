@@ -1,10 +1,15 @@
 use std::{
-    ffi::{c_uchar, c_ulong, c_ushort, c_void, CString},
+    ffi::{c_uchar, c_ulong, c_void, CString},
     marker::PhantomData,
     time::Duration,
 };
 
-use crate::{ffi, overlapped::Overlapped, try_d3xx, D3xxError, Pipe, Result, StreamPipes};
+use crate::{
+    descriptor::{ConfigurationDescriptor, DeviceDescriptor, InterfaceDescriptor},
+    ffi,
+    overlapped::Overlapped,
+    try_d3xx, D3xxError, Pipe, Result, StreamPipes,
+};
 
 type PhantomUnsync = PhantomData<std::cell::Cell<()>>;
 
@@ -89,6 +94,21 @@ impl Device {
     #[must_use]
     pub fn handle(&self) -> ffi::FT_HANDLE {
         self.handle
+    }
+
+    /// Get the device descriptor.
+    pub fn device_descriptor(&self) -> Result<DeviceDescriptor> {
+        DeviceDescriptor::new(self.handle)
+    }
+
+    /// Get the configuration descriptor.
+    pub fn configuration_descriptor(&self) -> Result<ConfigurationDescriptor> {
+        ConfigurationDescriptor::new(self.handle)
+    }
+
+    /// Get the interface descriptor for the given interface.
+    pub fn interface_descriptor(&self, interface: u8) -> Result<InterfaceDescriptor> {
+        InterfaceDescriptor::new(self.handle, interface)
     }
 
     /// Write to the specified pipe.
@@ -238,20 +258,6 @@ impl Device {
             .try_into()
             .unwrap_or_else(|_| panic!("timeout too large"));
         try_d3xx!(unsafe { ffi::FT_SetPipeTimeout(self.handle, pipe as c_uchar, timeout_ms) })
-    }
-
-    /// Get the device's vendor ID and product ID.
-    pub fn vid_pid(&self) -> Result<(usize, usize)> {
-        let mut vendor: c_ushort = 0;
-        let mut product: c_ushort = 0;
-        try_d3xx!(unsafe {
-            ffi::FT_GetVIDPID(
-                self.handle,
-                std::ptr::addr_of_mut!(vendor),
-                std::ptr::addr_of_mut!(product),
-            )
-        })?;
-        Ok((vendor as usize, product as usize))
     }
 }
 

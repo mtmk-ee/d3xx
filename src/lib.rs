@@ -38,8 +38,9 @@
 
 #![warn(clippy::all, clippy::pedantic, clippy::cargo, missing_docs)]
 // Allow missing error documentation since the D3XX documentation is vague about error conditions.
-#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::missing_errors_doc, clippy::module_name_repetitions)]
 
+mod descriptor;
 mod device;
 mod error;
 mod ffi;
