@@ -47,6 +47,18 @@ impl<'a> Pipe<'a> {
         self.id
     }
 
+    /// Get the descriptor for this endpoint.
+    pub fn descriptor(&self) -> Result<PipeInfo> {
+        // FT60x devices have 2 interfaces, and 0 is reserved.
+        // Page 33: https://ftdichip.com/wp-content/uploads/2020/07/AN_379-D3xx-Programmers-Guide-1.pdf
+        const INTERFACE_INDEX: c_uchar = 1;
+        let mut info = ffi::FT_PIPE_INFORMATION::default();
+        try_d3xx!(unsafe {
+            ffi::FT_GetPipeInformation(self.handle, INTERFACE_INDEX, self.id, &mut info)
+        })?;
+        PipeInfo::try_from(info)
+    }
+
     /// Set the stream size for this pipe.
     ///
     /// If `size` is `None` then streaming is disabled. Otherwise,
@@ -254,9 +266,9 @@ impl PipeInfo {
         self.pipe_type
     }
 
-    /// The pipe identifier.
+    /// The pipe ID.
     #[must_use]
-    pub fn pipe(&self) -> PipeId {
+    pub fn id(&self) -> PipeId {
         self.pipe
     }
 
@@ -342,7 +354,7 @@ mod tests {
         };
         let info = PipeInfo::try_from(info).unwrap();
         assert_eq!(info.pipe_type(), PipeType::Control);
-        assert_eq!(info.pipe(), PipeId::In0);
+        assert_eq!(info.id(), PipeId::In0);
         assert_eq!(info.max_packet_size(), 64);
         assert_eq!(info.interval(), 0);
     }
