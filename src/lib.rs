@@ -26,6 +26,19 @@
 //! // Write 1024 bytes to output pipe 1
 //! device.write(Pipe::Out1, &buf).unwrap();
 //! ```
+//!
+//! //! # Error Handling
+//!
+//! The documentation on most functions returning a `Result<T, D3xxError>` does not include an
+//! explanation about the error conditions. This is because the D3XX documentation is vague,
+//! providing little information about what errors can occur and under what circumstances.
+//!
+//! Catching specific errors in an API-backed manner is not possible, so it is recommended to
+//! use a catch-all approach in most cases.
+
+#![warn(clippy::all, clippy::pedantic, clippy::cargo, missing_docs)]
+// Allow missing error documentation since the D3XX documentation is vague about error conditions.
+#![allow(clippy::missing_errors_doc)]
 
 mod device;
 mod error;

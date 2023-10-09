@@ -37,6 +37,7 @@ impl TryFrom<u8> for Pipe {
 /// The type of a pipe.
 ///
 /// This is used to determine the type of transfer to use.
+#[allow(clippy::module_name_repetitions)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum PipeType {
     Control = 0,
@@ -77,6 +78,7 @@ impl Pipe {
 /// Information about a pipe on a device.
 ///
 /// This is returned by [`Device::pipe_info`].
+#[allow(clippy::module_name_repetitions)]
 pub struct PipeInfo {
     pipe_type: PipeType,
     pipe: Pipe,

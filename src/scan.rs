@@ -136,7 +136,7 @@ pub enum DeviceType {
 
 impl From<u32> for DeviceType {
     fn from(value: u32) -> Self {
-        match value as i32 {
+        match value {
             600 => Self::FT600,
             601 => Self::FT601,
             _ => Self::Unknown,

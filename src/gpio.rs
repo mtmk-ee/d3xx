@@ -1,6 +1,7 @@
 use crate::ffi;
 use crate::{try_d3xx, Device, Result};
 
+#[allow(clippy::module_name_repetitions)]
 pub trait GpioExt {
     fn enable_gpio(&self, gpio: Gpio, direction: Direction) -> Result<()>;
     fn write_gpio(&self, gpio: Gpio, level: Level) -> Result<()>;

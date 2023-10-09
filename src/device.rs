@@ -1,11 +1,12 @@
 use std::{
     ffi::{c_uchar, c_ulong, c_ushort, c_void, CString},
+    marker::PhantomData,
     time::Duration,
 };
 
 use crate::{ffi, overlapped::Overlapped, try_d3xx, D3xxError, Pipe, Result, StreamPipes};
 
-type PhantomUnsync = std::marker::PhantomData<std::cell::Cell<()>>;
+type PhantomUnsync = PhantomData<std::cell::Cell<()>>;
 
 /// Handle to a D3XX device.
 ///
@@ -30,8 +31,6 @@ type PhantomUnsync = std::marker::PhantomData<std::cell::Cell<()>>;
 pub struct Device {
     /// Handle returned by the D3XX driver when the device is opened.
     handle: ffi::FT_HANDLE,
-    /// Serial number of the device.
-    serial_number: String,
     // Cannot share handle across threads since the driver is not thread-safe,
     // and so we need to prevent race conditions on device operations.
     _unsync: PhantomUnsync,
@@ -47,6 +46,10 @@ impl Device {
     ///
     /// let device = Device::open("ABC123").unwrap();
     /// ```
+    ///
+    /// # Panics
+    ///
+    /// Panics if `serial_number` contains a null byte.
     pub fn open(serial_number: &str) -> Result<Self> {
         let serial_cstr = CString::new(serial_number).expect("failed to create CString");
         let mut handle: ffi::FT_HANDLE = std::ptr::null_mut();
@@ -62,9 +65,20 @@ impl Device {
         } else {
             Ok(Self {
                 handle,
-                serial_number: serial_number.to_owned(),
-                _unsync: Default::default(),
+                _unsync: PhantomData,
             })
+        }
+    }
+
+    /// Open a device using the given handle.
+    ///
+    /// # Safety
+    /// This method is unsafe because the handle must be valid and care should
+    /// not be used elsewhere.
+    pub unsafe fn with_handle(handle: ffi::FT_HANDLE) -> Self {
+        Self {
+            handle,
+            _unsync: PhantomData,
         }
     }
 
@@ -72,15 +86,9 @@ impl Device {
     ///
     /// This handle is fairly useless on its own. Although not recommended for typical
     /// users, it may be used with the raw D3XX bindings in the [ffi] module.
-    #[must_use] pub fn handle(&self) -> ffi::FT_HANDLE {
+    #[must_use]
+    pub fn handle(&self) -> ffi::FT_HANDLE {
         self.handle
-    }
-
-    /// Get the device's serial number.
-    ///
-    /// This is the serial number that was passed to `Device::open`.
-    #[must_use] pub fn serial_number(&self) -> &str {
-        &self.serial_number
     }
 
     /// Write to the specified pipe.
@@ -88,6 +96,10 @@ impl Device {
     /// This method will block until the transfer is complete.
     ///
     /// On success the number of bytes written is returned.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `buf.len()` exceeds [`std::ffi::c_ulong::MAX`]
     pub fn write(&self, pipe: Pipe, buf: &[u8]) -> Result<usize> {
         let res = ffi::util::write_pipe(self.handle, pipe as u8, buf);
         self.wrap_pipe_io_abort(pipe, res)
@@ -96,6 +108,10 @@ impl Device {
     /// Asynchronous write to the specified pipe.
     ///
     /// On success the number of bytes written is returned.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `buf.len()` exceeds [`std::ffi::c_ulong::MAX`]
     pub async fn write_async<'a>(&'a self, pipe: Pipe, buf: &[u8]) -> Result<usize> {
         let mut overlapped = Overlapped::new(self)?;
         let res = ffi::util::write_pipe_async(self.handle, pipe as u8, buf, overlapped.inner_mut());
@@ -108,6 +124,10 @@ impl Device {
     /// This method will block until the transfer is complete.
     ///
     /// On success the number of bytes read is returned.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `buf.len()` exceeds [`std::ffi::c_ulong::MAX`]
     pub fn read(&self, pipe: Pipe, buf: &mut [u8]) -> Result<usize> {
         let res = ffi::util::read_pipe(self.handle, pipe as u8, buf);
         self.wrap_pipe_io_abort(pipe, res)
@@ -116,6 +136,10 @@ impl Device {
     /// Asynchronous read from the specified pipe into the given buffer.
     ///
     /// On success the number of bytes read is returned.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `buf.len()` exceeds [`std::ffi::c_ulong::MAX`]
     pub async fn read_async(&self, pipe: Pipe, buf: &mut [u8]) -> Result<usize> {
         let mut overlapped = Overlapped::new(self)?;
         let res = ffi::util::read_pipe_async(self.handle, pipe as u8, buf, overlapped.inner_mut());
@@ -204,6 +228,10 @@ impl Device {
     ///
     /// The default is 5 seconds for all pipes, and is reset every time the
     /// device is opened.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `timeout` as milliseconds exceeds `u32::MAX`.
     pub fn set_pipe_timeout(&self, pipe: Pipe, timeout: Duration) -> Result<()> {
         let timeout_ms = timeout
             .as_millis()
@@ -214,16 +242,16 @@ impl Device {
 
     /// Get the device's vendor ID and product ID.
     pub fn vid_pid(&self) -> Result<(usize, usize)> {
-        let mut vid: c_ushort = 0;
-        let mut pid: c_ushort = 0;
+        let mut vendor: c_ushort = 0;
+        let mut product: c_ushort = 0;
         try_d3xx!(unsafe {
             ffi::FT_GetVIDPID(
                 self.handle,
-                std::ptr::addr_of_mut!(vid),
-                std::ptr::addr_of_mut!(pid),
+                std::ptr::addr_of_mut!(vendor),
+                std::ptr::addr_of_mut!(product),
             )
         })?;
-        Ok((vid as usize, pid as usize))
+        Ok((vendor as usize, product as usize))
     }
 }
 

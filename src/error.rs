@@ -19,6 +19,7 @@ pub type Result<T, E = D3xxError> = std::result::Result<T, E>;
 ///
 /// Note that the `from` method will panic if the given code is invalid.
 #[allow(unused)]
+#[allow(clippy::module_name_repetitions)]
 #[derive(thiserror::Error, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u8)]
 pub enum D3xxError {

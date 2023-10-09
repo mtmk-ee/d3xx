@@ -25,18 +25,12 @@ impl<'a> Overlapped<'a> {
     pub fn new(device: &'a Device) -> Result<Self> {
         let mut overlapped: MaybeUninit<ffi::_OVERLAPPED> = MaybeUninit::uninit();
         try_d3xx!(unsafe {
-            ffi::FT_InitializeOverlapped(
-                device.handle(),
-                std::ptr::addr_of_mut!(overlapped).cast(),
-            )
+            ffi::FT_InitializeOverlapped(device.handle(), std::ptr::addr_of_mut!(overlapped).cast())
         })?;
         // SAFETY: `overlapped` is initialized since the initialization must have
         // succeeded if we're here.
         let overlapped = unsafe { overlapped.assume_init() };
-        Ok(Self {
-            device,
-            overlapped,
-        })
+        Ok(Self { device, overlapped })
     }
 
     /// Get a reference to the underlying `FT_OVERLAPPED` structure.

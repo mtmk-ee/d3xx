@@ -1,6 +1,6 @@
 pub mod util;
 
-use std::{sync::Mutex};
+use std::sync::Mutex;
 
 pub use libftd3xx_ffi::*;
 
@@ -22,5 +22,16 @@ where
     unsafe {
         let _guard = GLOBAL_LOCK.lock().unwrap();
         f()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_global_lock() {
+        let _guard = unsafe { GLOBAL_LOCK.lock().unwrap() };
+        assert!(unsafe { GLOBAL_LOCK.try_lock() }.is_err());
     }
 }
