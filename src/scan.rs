@@ -8,6 +8,7 @@ use crate::{
 /// Information about a connected `FT60x` device.
 ///
 /// This structure is returned by [`list_devices`].
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DeviceInfo {
     flags: u32,
     device_type: DeviceType,
@@ -28,65 +29,82 @@ impl DeviceInfo {
     }
 
     /// Check if the device is open, either by this process or another.
-    #[must_use] pub fn is_open(&self) -> bool {
+    #[must_use]
+    pub fn is_open(&self) -> bool {
         self.flags & ffi::FT_FLAGS::FT_FLAGS_OPENED as u32 != 0
     }
 
     /// Check if the device is a high-speed device.
-    #[must_use] pub fn is_hispeed(&self) -> bool {
+    #[must_use]
+    pub fn is_hispeed(&self) -> bool {
         self.flags & ffi::FT_FLAGS::FT_FLAGS_HISPEED as u32 != 0
     }
 
     /// Check if the device is a superspeed device.
-    #[must_use] pub fn is_superspeed(&self) -> bool {
+    #[must_use]
+    pub fn is_superspeed(&self) -> bool {
         self.flags & ffi::FT_FLAGS::FT_FLAGS_SUPERSPEED as u32 != 0
     }
 
     /// Get the device's flags.
-    #[must_use] pub fn flags(&self) -> u32 {
+    #[must_use]
+    pub fn flags(&self) -> u32 {
         self.flags
     }
 
     /// Get the device's type.
-    #[must_use] pub fn device_type(&self) -> DeviceType {
+    #[must_use]
+    pub fn device_type(&self) -> DeviceType {
         self.device_type
     }
 
     /// Get the device's vendor ID.
-    #[must_use] pub fn vid(&self) -> u16 {
+    #[must_use]
+    pub fn vid(&self) -> u16 {
         self.vid
     }
 
     /// Get the device's product ID.
-    #[must_use] pub fn pid(&self) -> u16 {
+    #[must_use]
+    pub fn pid(&self) -> u16 {
         self.pid
     }
 
     /// Get the device's location ID.
-    #[must_use] pub fn location_id(&self) -> u32 {
+    #[must_use]
+    pub fn location_id(&self) -> u32 {
         self.location_id
     }
 
     /// Get the device's serial number.
-    #[must_use] pub fn serial_number(&self) -> &str {
+    #[must_use]
+    pub fn serial_number(&self) -> &str {
         &self.serial_number
     }
 
     /// Get the device's description.
-    #[must_use] pub fn description(&self) -> &str {
+    #[must_use]
+    pub fn description(&self) -> &str {
         &self.description
     }
 
     /// Get the device's handle.
     ///
     /// This is probably not useful to you.
-    #[must_use] pub fn handle(&self) -> ffi::FT_HANDLE {
+    #[must_use]
+    pub fn handle(&self) -> ffi::FT_HANDLE {
         self.handle
     }
 }
 
 impl From<ffi::FT_DEVICE_LIST_INFO_NODE> for DeviceInfo {
     fn from(info: ffi::FT_DEVICE_LIST_INFO_NODE) -> Self {
+        Self::from(&info)
+    }
+}
+
+impl From<&ffi::FT_DEVICE_LIST_INFO_NODE> for DeviceInfo {
+    fn from(info: &ffi::FT_DEVICE_LIST_INFO_NODE) -> Self {
         // SAFETY: the strings are guaranteed to be non-null and null-terminated
         let serial_number = unsafe { std::ffi::CStr::from_ptr(info.SerialNumber.as_ptr()) }
             .to_string_lossy()
@@ -147,10 +165,7 @@ pub fn list_devices() -> Result<Vec<DeviceInfo>> {
         Ok(devices)
     })?;
 
-    Ok(devices
-        .into_iter()
-        .map(DeviceInfo::from)
-        .collect())
+    Ok(devices.into_iter().map(DeviceInfo::from).collect())
 }
 
 /// Create a device info list and return the number of devices.
@@ -163,4 +178,85 @@ fn create_device_info_list() -> Result<usize> {
     let mut num_devices: c_ulong = 0;
     try_d3xx!(unsafe { ffi::FT_CreateDeviceInfoList(&mut num_devices) })?;
     Ok(num_devices as usize)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn device_type_from() {
+        assert_eq!(DeviceType::from(600), DeviceType::FT600);
+        assert_eq!(DeviceType::from(601), DeviceType::FT601);
+        assert_eq!(DeviceType::from(0), DeviceType::Unknown);
+    }
+
+    #[test]
+    fn device_info_from() {
+        fn array<const A: usize, const B: usize>(array: &[u8; A]) -> [i8; B] {
+            assert!(A < B);
+            let mut out = [0i8; B];
+            array
+                .iter()
+                .enumerate()
+                .for_each(|(i, &a)| out[i] = i8::try_from(a).unwrap());
+            out
+        }
+
+        let serial = array(b"ABC123");
+        let description = array(b"FT601");
+        let info = ffi::FT_DEVICE_LIST_INFO_NODE {
+            Flags: 1,
+            Type: 600,
+            ID: 0x0403_6010,
+            LocId: 2,
+            SerialNumber: serial,
+            Description: description,
+            ftHandle: std::ptr::null_mut(),
+        };
+        let info = DeviceInfo::from(info);
+        assert_eq!(info.flags(), 1);
+        assert_eq!(info.device_type(), DeviceType::FT600);
+        assert_eq!(info.vid(), 0x0403);
+        assert_eq!(info.pid(), 0x6010);
+        assert_eq!(info.location_id(), 2);
+        assert_eq!(info.serial_number(), "ABC123");
+        assert_eq!(info.description(), "FT601");
+        assert_eq!(info.handle(), std::ptr::null_mut());
+    }
+
+    #[test]
+    fn device_info_flags() {
+        let mut raw_info = ffi::FT_DEVICE_LIST_INFO_NODE {
+            Flags: 0,
+            Type: 0,
+            ID: 0,
+            LocId: 0,
+            SerialNumber: [0; 16],
+            Description: [0; 32],
+            ftHandle: std::ptr::null_mut(),
+        };
+        let info = DeviceInfo::from(&raw_info);
+        assert!(!info.is_open());
+        assert!(!info.is_hispeed());
+        assert!(!info.is_superspeed());
+
+        raw_info.Flags = ffi::FT_FLAGS::FT_FLAGS_OPENED as u32;
+        let info = DeviceInfo::from(&raw_info);
+        assert!(info.is_open());
+        assert!(!info.is_hispeed());
+        assert!(!info.is_superspeed());
+
+        raw_info.Flags = ffi::FT_FLAGS::FT_FLAGS_HISPEED as u32;
+        let info = DeviceInfo::from(&raw_info);
+        assert!(!info.is_open());
+        assert!(info.is_hispeed());
+        assert!(!info.is_superspeed());
+
+        raw_info.Flags = ffi::FT_FLAGS::FT_FLAGS_SUPERSPEED as u32;
+        let info = DeviceInfo::from(&raw_info);
+        assert!(!info.is_open());
+        assert!(!info.is_hispeed());
+        assert!(info.is_superspeed());
+    }
 }

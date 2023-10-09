@@ -61,13 +61,15 @@ impl TryFrom<ffi::FT_PIPE_TYPE> for PipeType {
 impl Pipe {
     /// Check if the pipe is an input (read) pipe.
     #[inline]
-    #[must_use] pub fn is_in(self) -> bool {
+    #[must_use]
+    pub fn is_in(self) -> bool {
         !self.is_out()
     }
 
     /// Check if the pipe is an output (write) pipe.
     #[inline]
-    #[must_use] pub fn is_out(self) -> bool {
+    #[must_use]
+    pub fn is_out(self) -> bool {
         (self as u8) & 0x80 == 0
     }
 }
@@ -84,22 +86,26 @@ pub struct PipeInfo {
 
 impl PipeInfo {
     /// The type of pipe.
-    #[must_use] pub fn pipe_type(&self) -> PipeType {
+    #[must_use]
+    pub fn pipe_type(&self) -> PipeType {
         self.pipe_type
     }
 
     /// The pipe identifier.
-    #[must_use] pub fn pipe(&self) -> Pipe {
+    #[must_use]
+    pub fn pipe(&self) -> Pipe {
         self.pipe
     }
 
     /// The maximum packet size in bytes.
-    #[must_use] pub fn max_packet_size(&self) -> usize {
+    #[must_use]
+    pub fn max_packet_size(&self) -> usize {
         self.max_packet_size
     }
 
     /// The polling interval in milliseconds.
-    #[must_use] pub fn interval(&self) -> u8 {
+    #[must_use]
+    pub fn interval(&self) -> u8 {
         self.interval
     }
 }
@@ -149,7 +155,8 @@ pub struct StreamPipes {
 
 impl StreamPipes {
     /// Create a new empty set.
-    #[must_use] pub fn none() -> Self {
+    #[must_use]
+    pub fn none() -> Self {
         Self::default()
     }
 
@@ -157,7 +164,8 @@ impl StreamPipes {
     ///
     /// If a pipe of the same variant already exists the stream size
     /// will be updated.
-    #[must_use] pub fn with_pipe(mut self, pipe: Pipe, stream_size: usize) -> Self {
+    #[must_use]
+    pub fn with_pipe(mut self, pipe: Pipe, stream_size: usize) -> Self {
         self.pipes.insert(pipe, stream_size);
         self
     }
@@ -173,5 +181,119 @@ impl IntoIterator for StreamPipes {
 
     fn into_iter(self) -> Self::IntoIter {
         self.pipes.into_iter()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pipe_try_from() {
+        assert_eq!(Pipe::try_from(0x82), Ok(Pipe::In0));
+        assert_eq!(Pipe::try_from(0x83), Ok(Pipe::In1));
+        assert_eq!(Pipe::try_from(0x84), Ok(Pipe::In2));
+        assert_eq!(Pipe::try_from(0x85), Ok(Pipe::In3));
+        assert_eq!(Pipe::try_from(0x02), Ok(Pipe::Out0));
+        assert_eq!(Pipe::try_from(0x03), Ok(Pipe::Out1));
+        assert_eq!(Pipe::try_from(0x04), Ok(Pipe::Out2));
+        assert_eq!(Pipe::try_from(0x05), Ok(Pipe::Out3));
+        assert_eq!(Pipe::try_from(0x00), Err(()));
+        assert_eq!(Pipe::try_from(0x01), Err(()));
+        assert_eq!(Pipe::try_from(0x06), Err(()));
+        assert_eq!(Pipe::try_from(0x81), Err(()));
+        assert_eq!(Pipe::try_from(0x86), Err(()));
+        assert_eq!(Pipe::try_from(0xFF), Err(()));
+    }
+
+    #[test]
+    fn pipe_is_in() {
+        assert!(Pipe::In0.is_in());
+        assert!(Pipe::In1.is_in());
+        assert!(Pipe::In2.is_in());
+        assert!(Pipe::In3.is_in());
+        assert!(!Pipe::Out0.is_in());
+        assert!(!Pipe::Out1.is_in());
+        assert!(!Pipe::Out2.is_in());
+        assert!(!Pipe::Out3.is_in());
+    }
+
+    #[test]
+    fn pipe_is_out() {
+        assert!(!Pipe::In0.is_out());
+        assert!(!Pipe::In1.is_out());
+        assert!(!Pipe::In2.is_out());
+        assert!(!Pipe::In3.is_out());
+        assert!(Pipe::Out0.is_out());
+        assert!(Pipe::Out1.is_out());
+        assert!(Pipe::Out2.is_out());
+        assert!(Pipe::Out3.is_out());
+    }
+
+    #[test]
+    fn pipe_info_try_from() {
+        let info = ffi::FT_PIPE_INFORMATION {
+            PipeType: ffi::FT_PIPE_TYPE::FTPipeTypeControl,
+            PipeId: 0x82,
+            MaximumPacketSize: 64,
+            Interval: 0,
+        };
+        let info = PipeInfo::try_from(info).unwrap();
+        assert_eq!(info.pipe_type(), PipeType::Control);
+        assert_eq!(info.pipe(), Pipe::In0);
+        assert_eq!(info.max_packet_size(), 64);
+        assert_eq!(info.interval(), 0);
+    }
+
+    #[test]
+    fn stream_pipes_with_pipe() {
+        let pipes = StreamPipes::default()
+            .with_pipe(Pipe::In1, 1024)
+            .with_pipe(Pipe::In2, 1024)
+            .with_pipe(Pipe::Out1, 1024);
+        assert_eq!(pipes.pipes.len(), 3);
+        assert_eq!(pipes.pipes[&Pipe::In1], 1024);
+        assert_eq!(pipes.pipes[&Pipe::In2], 1024);
+        assert_eq!(pipes.pipes[&Pipe::Out1], 1024);
+    }
+
+    #[test]
+    fn stream_pipes_with_pipe_overwrite() {
+        let pipes = StreamPipes::default()
+            .with_pipe(Pipe::In1, 1024)
+            .with_pipe(Pipe::In1, 2048);
+        assert_eq!(pipes.pipes.len(), 1);
+        assert_eq!(pipes.pipes[&Pipe::In1], 2048);
+    }
+
+    #[test]
+    fn stream_pipes_default() {
+        let pipes = StreamPipes::default();
+        assert_eq!(pipes.pipes.len(), 0);
+    }
+
+    #[test]
+    fn stream_pipes_none() {
+        let pipes = StreamPipes::none();
+        assert_eq!(pipes.pipes.len(), 0);
+    }
+
+    #[test]
+    fn stream_pipes_iter() {
+        let pipes = StreamPipes::default()
+            .with_pipe(Pipe::In1, 1024)
+            .with_pipe(Pipe::In2, 1025)
+            .with_pipe(Pipe::Out1, 1026);
+
+        // cannot guarantee order of iteration
+        assert!(pipes
+            .iter()
+            .any(|(&pipe, &size)| pipe == Pipe::In1 && size == 1024));
+        assert!(pipes
+            .iter()
+            .any(|(&pipe, &size)| pipe == Pipe::In2 && size == 1025));
+        assert!(pipes
+            .iter()
+            .any(|(&pipe, &size)| pipe == Pipe::Out1 && size == 1026));
     }
 }

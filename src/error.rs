@@ -60,7 +60,8 @@ pub enum D3xxError {
 
 impl D3xxError {
     /// Get the error code as an integer.
-    #[must_use] pub fn code(&self) -> u8 {
+    #[must_use]
+    pub fn code(&self) -> u8 {
         *self as u8
     }
 }
@@ -122,3 +123,59 @@ macro_rules! try_d3xx {
 }
 
 pub(crate) use try_d3xx;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const ERROR_CODE_MAP: [(D3xxError, ffi::FT_STATUS); 32] = [
+        (D3xxError::InvalidHandle, 1),
+        (D3xxError::DeviceNotFound, 2),
+        (D3xxError::DeviceNotOpened, 3),
+        (D3xxError::IoError, 4),
+        (D3xxError::InsufficientResources, 5),
+        (D3xxError::InvalidParameter, 6),
+        (D3xxError::InvalidBaudRate, 7),
+        (D3xxError::DeviceNotOpenedForErase, 8),
+        (D3xxError::DeviceNotOpenedForWrite, 9),
+        (D3xxError::FailedToWriteDevice, 10),
+        (D3xxError::EEPROMReadFailed, 11),
+        (D3xxError::EEPROMWriteFailed, 12),
+        (D3xxError::EEPROMEraseFailed, 13),
+        (D3xxError::EEPROMNotPresent, 14),
+        (D3xxError::EEPROMNotProgrammed, 15),
+        (D3xxError::InvalidArgs, 16),
+        (D3xxError::NotSupported, 17),
+        (D3xxError::NoMoreItems, 18),
+        (D3xxError::Timeout, 19),
+        (D3xxError::OperationAborted, 20),
+        (D3xxError::ReservedPipe, 21),
+        (D3xxError::InvalidControlRequestDirection, 22),
+        (D3xxError::InvalidControLRequestType, 23),
+        (D3xxError::IoPending, 24),
+        (D3xxError::IoIncomplete, 25),
+        (D3xxError::HandleEof, 26),
+        (D3xxError::Busy, 27),
+        (D3xxError::NoSystemResources, 28),
+        (D3xxError::DeviceListNotReady, 29),
+        (D3xxError::DeviceNotConnected, 30),
+        (D3xxError::IncorrectDevicePath, 31),
+        (D3xxError::OtherError, 32),
+    ];
+
+    #[test]
+    fn test_d3xx_error_codes() {
+        for (variant, code) in ERROR_CODE_MAP {
+            assert_eq!(D3xxError::from(code), variant);
+            assert_eq!(u32::from(variant.code()), code);
+        }
+    }
+
+    #[test]
+    fn test_try_d3xx_macro() {
+        assert_eq!(try_d3xx!(0), Ok(()));
+        for (variant, code) in ERROR_CODE_MAP {
+            assert_eq!(try_d3xx!(code), Err(variant));
+        }
+    }
+}
