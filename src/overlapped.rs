@@ -1,6 +1,8 @@
-use std::{ffi::c_ulong, future::Future, mem::MaybeUninit};
+use std::{ffi::c_ulong, future::Future, marker::PhantomData, mem::MaybeUninit};
 
-use crate::{ffi, try_d3xx, D3xxError, Device, Result};
+use crate::{ffi, try_d3xx, D3xxError, Result};
+
+type PhantomLifetime<'a> = PhantomData<&'a ()>;
 
 /// Wrapper around the `FT_OVERLAPPED` structure.
 ///
@@ -15,22 +17,27 @@ use crate::{ffi, try_d3xx, D3xxError, Device, Result};
 /// the `async`/`await` syntax.
 pub struct Overlapped<'a> {
     /// Reference to the device that this overlapped operation is associated with.
-    device: &'a Device,
+    handle: ffi::HANDLE,
     /// Underlying `FT_OVERLAPPED` structure.
     overlapped: ffi::_OVERLAPPED,
+    _lifetime_constraint: PhantomLifetime<'a>,
 }
 
 impl<'a> Overlapped<'a> {
     /// Create a new `Overlapped` instance using the given device.
-    pub fn new(device: &'a Device) -> Result<Self> {
+    pub(crate) fn new(handle: ffi::FT_HANDLE) -> Result<Self> {
         let mut overlapped: MaybeUninit<ffi::_OVERLAPPED> = MaybeUninit::uninit();
         try_d3xx!(unsafe {
-            ffi::FT_InitializeOverlapped(device.handle(), std::ptr::addr_of_mut!(overlapped).cast())
+            ffi::FT_InitializeOverlapped(handle, std::ptr::addr_of_mut!(overlapped).cast())
         })?;
         // SAFETY: `overlapped` is initialized since the initialization must have
         // succeeded if we're here.
         let overlapped = unsafe { overlapped.assume_init() };
-        Ok(Self { device, overlapped })
+        Ok(Self {
+            handle,
+            overlapped,
+            _lifetime_constraint: PhantomData,
+        })
     }
 
     /// Get a reference to the underlying `FT_OVERLAPPED` structure.
@@ -57,7 +64,7 @@ impl<'a> Overlapped<'a> {
         let mut transferred: c_ulong = 0;
         try_d3xx!(unsafe {
             ffi::FT_GetOverlappedResult(
-                self.device.handle(),
+                self.handle,
                 self.inner_mut() as *mut ffi::_OVERLAPPED,
                 std::ptr::addr_of_mut!(transferred),
                 i32::from(wait),
@@ -88,10 +95,7 @@ impl Future for Overlapped<'_> {
 impl Drop for Overlapped<'_> {
     fn drop(&mut self) {
         unsafe {
-            ffi::FT_ReleaseOverlapped(
-                self.device.handle(),
-                self.inner_mut() as *mut ffi::_OVERLAPPED,
-            );
+            ffi::FT_ReleaseOverlapped(self.handle, self.inner_mut() as *mut ffi::_OVERLAPPED);
         }
     }
 }

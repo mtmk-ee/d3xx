@@ -114,6 +114,12 @@ impl From<ffi::FT_STATUS> for D3xxError {
     }
 }
 
+impl From<D3xxError> for std::io::Error {
+    fn from(value: D3xxError) -> Self {
+        Self::new(std::io::ErrorKind::Other, value)
+    }
+}
+
 macro_rules! try_d3xx {
     ($expr:expr) => {
         match $expr {

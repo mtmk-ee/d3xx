@@ -1,1 +1,1 @@
-pub use crate::{list_devices, Device, Pipe};
+pub use crate::{list_devices, Device, Pipe, PipeId};

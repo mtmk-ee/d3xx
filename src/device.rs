@@ -1,14 +1,11 @@
 use std::{
-    ffi::{c_uchar, c_ulong, c_void, CString},
+    ffi::{c_void, CString},
     marker::PhantomData,
-    time::Duration,
 };
 
 use crate::{
     descriptor::{ConfigurationDescriptor, DeviceDescriptor, InterfaceDescriptor},
-    ffi,
-    overlapped::Overlapped,
-    try_d3xx, D3xxError, Pipe, Result, StreamPipes,
+    ffi, try_d3xx, Pipe, PipeId, Result,
 };
 
 type PhantomUnsync = PhantomData<std::cell::Cell<()>>;
@@ -111,153 +108,25 @@ impl Device {
         InterfaceDescriptor::new(self.handle, interface)
     }
 
-    /// Write to the specified pipe.
+    /// Returns a [`Pipe`] for pipe I/O and configuration.
     ///
-    /// This method will block until the transfer is complete.
-    ///
-    /// On success the number of bytes written is returned.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `buf.len()` exceeds [`std::ffi::c_ulong::MAX`]
-    pub fn write(&self, pipe: Pipe, buf: &[u8]) -> Result<usize> {
-        let res = ffi::util::write_pipe(self.handle, pipe as u8, buf);
-        self.wrap_pipe_io_abort(pipe, res)
-    }
-
-    /// Asynchronous write to the specified pipe.
-    ///
-    /// On success the number of bytes written is returned.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `buf.len()` exceeds [`std::ffi::c_ulong::MAX`]
-    pub async fn write_async<'a>(&'a self, pipe: Pipe, buf: &[u8]) -> Result<usize> {
-        let mut overlapped = Overlapped::new(self)?;
-        let res = ffi::util::write_pipe_async(self.handle, pipe as u8, buf, overlapped.inner_mut());
-        self.wrap_pipe_io_abort(pipe, res)?;
-        overlapped.await
-    }
-
-    /// Read from the specified pipe into the given buffer.
-    ///
-    /// This method will block until the transfer is complete.
-    ///
-    /// On success the number of bytes read is returned.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `buf.len()` exceeds [`std::ffi::c_ulong::MAX`]
-    pub fn read(&self, pipe: Pipe, buf: &mut [u8]) -> Result<usize> {
-        let res = ffi::util::read_pipe(self.handle, pipe as u8, buf);
-        self.wrap_pipe_io_abort(pipe, res)
-    }
-
-    /// Asynchronous read from the specified pipe into the given buffer.
-    ///
-    /// On success the number of bytes read is returned.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `buf.len()` exceeds [`std::ffi::c_ulong::MAX`]
-    pub async fn read_async(&self, pipe: Pipe, buf: &mut [u8]) -> Result<usize> {
-        let mut overlapped = Overlapped::new(self)?;
-        let res = ffi::util::read_pipe_async(self.handle, pipe as u8, buf, overlapped.inner_mut());
-        self.wrap_pipe_io_abort(pipe, res)?;
-        overlapped.await
-    }
-
-    /// Enable streaming protocol transfer for the specified pipes.
-    ///
-    /// See D3XX Programmer's Guide, Section 2.14 for more information.
-    ///
-    /// # Example
+    /// # Examples
     ///
     /// ```no_run
-    /// use d3xx::{Device, Pipe, StreamPipes};
+    /// use d3xx::{Device, Pipe, PipeId};
     ///
     /// let device = Device::open("ABC123").unwrap();
     ///
-    /// // Disable streaming on all pipes
-    /// device.set_stream_pipes(StreamPipes::default()).unwrap();
-    ///
-    /// // Enable streaming on input pipe 1 with a stream size of 1024 bytes
-    /// device.set_stream_pipes(
-    ///     StreamPipes::default().with_pipe(Pipe::In1, 1024)
-    /// ).unwrap();
-    ///
-    /// // Enable streaming on several pipes
-    /// device.set_stream_pipes(
-    ///    StreamPipes::default()
-    ///       .with_pipe(Pipe::In1, 1024)
-    ///       .with_pipe(Pipe::In2, 1024)
-    ///       .with_pipe(Pipe::Out1, 1024)
-    /// ).unwrap();
+    /// // Write to output pipe 1
+    /// let mut buf = vec![0u8; 1024];
+    /// device
+    ///     .pipe(PipeId::Out1)
+    ///     .write(&buf)
+    ///     .unwrap();
     /// ```
-    pub fn set_stream_pipes(&self, pipes: StreamPipes) -> Result<()> {
-        try_d3xx!(unsafe {
-            ffi::FT_ClearStreamPipe(self.handle, c_uchar::from(true), c_uchar::from(true), 0)
-        })?;
-        for (pipe, stream_size) in pipes {
-            try_d3xx!(unsafe {
-                ffi::FT_SetStreamPipe(
-                    self.handle,
-                    c_uchar::from(false),
-                    c_uchar::from(false),
-                    pipe as c_uchar,
-                    stream_size.try_into().or(Err(D3xxError::InvalidArgs))?,
-                )
-            })?;
-        }
-        Ok(())
-    }
-
-    /// Aborts all pending transfers on the specified pipe.
-    pub fn abort_pipe(&self, pipe: Pipe) -> Result<()> {
-        try_d3xx!(unsafe { ffi::FT_AbortPipe(self.handle, pipe as c_uchar) })
-    }
-
-    /// Aborts all pending transfers on the specified pipe if the given result is an error.
-    ///
-    /// This is a convenience method for aborting a pipe on read/write failure, as required
-    /// by the driver. See D3XX Programmer's Guide, pg. 15 for more information.
-    ///
-    /// Returns the given result for convenience.
-    fn wrap_pipe_io_abort<T>(&self, pipe: Pipe, res: Result<T>) -> Result<T> {
-        res.map_err(|e| {
-            let _ = self.abort_pipe(pipe);
-            e
-        })
-    }
-
-    /// Get the timeout for the specified pipe.
-    ///
-    /// The default is 5 seconds for all pipes, and is reset every time the
-    /// device is opened.
-    pub fn pipe_timeout(&self, pipe: Pipe) -> Result<Duration> {
-        let mut timeout_ms: c_ulong = 0;
-        try_d3xx!(unsafe {
-            ffi::FT_GetPipeTimeout(self.handle, pipe as c_uchar, &mut timeout_ms)
-        })?;
-        Ok(Duration::from_millis(u64::from(timeout_ms)))
-    }
-
-    /// Set the timeout for the specified pipe.
-    ///
-    /// The maximum timeout is `u32::MAX` milliseconds.
-    ///
-    /// The default is 5 seconds for all pipes, and is reset every time the
-    /// device is opened.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `timeout` as milliseconds exceeds `u32::MAX`.
-    pub fn set_pipe_timeout(&self, pipe: Pipe, timeout: Duration) -> Result<()> {
-        let timeout_ms = timeout
-            .as_millis()
-            .try_into()
-            .unwrap_or_else(|_| panic!("timeout too large"));
-        try_d3xx!(unsafe { ffi::FT_SetPipeTimeout(self.handle, pipe as c_uchar, timeout_ms) })
+    #[must_use]
+    pub fn pipe(&self, id: PipeId) -> Pipe {
+        Pipe::new(self, id)
     }
 }
 
