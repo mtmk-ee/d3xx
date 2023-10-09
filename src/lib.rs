@@ -55,3 +55,36 @@ pub use error::*;
 pub use pipe::*;
 pub use prelude::*;
 pub use scan::*;
+
+/// Get the version of the D3XX library.
+pub fn library_version() -> Result<Version> {
+    let mut version: u32 = 0;
+    try_d3xx!(unsafe { ffi::FT_GetLibraryVersion(&mut version) })?;
+    Ok(Version(version))
+}
+
+/// D3XX library or driver version.
+pub struct Version(u32);
+
+impl Version {
+    /// Major version number.
+    #[allow(clippy::cast_possible_truncation)]
+    #[must_use]
+    pub fn major(&self) -> u8 {
+        (self.0 >> 16) as u8
+    }
+
+    /// Minor version number.
+    #[allow(clippy::cast_possible_truncation)]
+    #[must_use]
+    pub fn minor(&self) -> u8 {
+        (self.0 >> 8) as u8
+    }
+
+    /// Build/subversion version number.
+    #[allow(clippy::cast_possible_truncation)]
+    #[must_use]
+    pub fn build(&self) -> u16 {
+        self.0 as u16
+    }
+}
