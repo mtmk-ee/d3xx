@@ -13,7 +13,7 @@ use crate::{ffi, try_d3xx, D3xxError, Device, Result};
 ///
 /// This struct also implements the [`Future`] trait, so it can be used with
 /// the `async`/`await` syntax.
-pub(crate) struct Overlapped<'a> {
+pub struct Overlapped<'a> {
     /// Reference to the device that this overlapped operation is associated with.
     device: &'a Device,
     /// Underlying `FT_OVERLAPPED` structure.
@@ -27,7 +27,7 @@ impl<'a> Overlapped<'a> {
         try_d3xx!(unsafe {
             ffi::FT_InitializeOverlapped(
                 device.handle(),
-                &mut overlapped as *mut MaybeUninit<ffi::_OVERLAPPED> as *mut ffi::_OVERLAPPED,
+                std::ptr::addr_of_mut!(overlapped).cast(),
             )
         })?;
         // SAFETY: `overlapped` is initialized since the initialization must have
@@ -65,8 +65,8 @@ impl<'a> Overlapped<'a> {
             ffi::FT_GetOverlappedResult(
                 self.device.handle(),
                 self.inner_mut() as *mut ffi::_OVERLAPPED,
-                &mut transferred as *mut c_ulong,
-                wait as i32,
+                std::ptr::addr_of_mut!(transferred),
+                i32::from(wait),
             )
         })?;
         Ok(transferred as usize)

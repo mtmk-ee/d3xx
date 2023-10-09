@@ -5,7 +5,7 @@ use crate::{
     try_d3xx, Device, Result,
 };
 
-/// Information about a connected FT60x device.
+/// Information about a connected `FT60x` device.
 ///
 /// This structure is returned by [`list_devices`].
 pub struct DeviceInfo {
@@ -28,59 +28,59 @@ impl DeviceInfo {
     }
 
     /// Check if the device is open, either by this process or another.
-    pub fn is_open(&self) -> bool {
+    #[must_use] pub fn is_open(&self) -> bool {
         self.flags & ffi::FT_FLAGS::FT_FLAGS_OPENED as u32 != 0
     }
 
     /// Check if the device is a high-speed device.
-    pub fn is_hispeed(&self) -> bool {
+    #[must_use] pub fn is_hispeed(&self) -> bool {
         self.flags & ffi::FT_FLAGS::FT_FLAGS_HISPEED as u32 != 0
     }
 
     /// Check if the device is a superspeed device.
-    pub fn is_superspeed(&self) -> bool {
+    #[must_use] pub fn is_superspeed(&self) -> bool {
         self.flags & ffi::FT_FLAGS::FT_FLAGS_SUPERSPEED as u32 != 0
     }
 
     /// Get the device's flags.
-    pub fn flags(&self) -> u32 {
+    #[must_use] pub fn flags(&self) -> u32 {
         self.flags
     }
 
     /// Get the device's type.
-    pub fn device_type(&self) -> DeviceType {
+    #[must_use] pub fn device_type(&self) -> DeviceType {
         self.device_type
     }
 
     /// Get the device's vendor ID.
-    pub fn vid(&self) -> u16 {
+    #[must_use] pub fn vid(&self) -> u16 {
         self.vid
     }
 
     /// Get the device's product ID.
-    pub fn pid(&self) -> u16 {
+    #[must_use] pub fn pid(&self) -> u16 {
         self.pid
     }
 
     /// Get the device's location ID.
-    pub fn location_id(&self) -> u32 {
+    #[must_use] pub fn location_id(&self) -> u32 {
         self.location_id
     }
 
     /// Get the device's serial number.
-    pub fn serial_number(&self) -> &str {
+    #[must_use] pub fn serial_number(&self) -> &str {
         &self.serial_number
     }
 
     /// Get the device's description.
-    pub fn description(&self) -> &str {
+    #[must_use] pub fn description(&self) -> &str {
         &self.description
     }
 
     /// Get the device's handle.
     ///
     /// This is probably not useful to you.
-    pub fn handle(&self) -> ffi::FT_HANDLE {
+    #[must_use] pub fn handle(&self) -> ffi::FT_HANDLE {
         self.handle
     }
 }
@@ -107,7 +107,7 @@ impl From<ffi::FT_DEVICE_LIST_INFO_NODE> for DeviceInfo {
     }
 }
 
-/// Represents the type of FT60x device.
+/// Represents the type of `FT60x` device.
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum DeviceType {
@@ -126,7 +126,7 @@ impl From<u32> for DeviceType {
     }
 }
 
-/// List all connected FT60x devices.
+/// List all connected `FT60x` devices.
 pub fn list_devices() -> Result<Vec<DeviceInfo>> {
     // global lock needed to prevent concurrent access to the driver's internal device table
     let devices = with_global_lock(|| -> Result<_> {
@@ -137,7 +137,7 @@ pub fn list_devices() -> Result<Vec<DeviceInfo>> {
         try_d3xx!(unsafe {
             ffi::FT_GetDeviceInfoList(
                 devices.as_mut_ptr(),
-                &mut figuratively_garbage as *mut c_uint,
+                std::ptr::addr_of_mut!(figuratively_garbage),
             )
         })?;
         // SAFETY: the number of devices is known to be correct

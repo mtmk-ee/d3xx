@@ -1,6 +1,6 @@
-pub(crate) mod util;
+pub mod util;
 
-use std::{ffi::c_uchar, sync::Mutex};
+use std::{sync::Mutex};
 
 pub use libftd3xx_ffi::*;
 
@@ -15,7 +15,7 @@ static mut GLOBAL_LOCK: Mutex<()> = Mutex::new(()); // FIXME: is a reentrant mut
 /// For example, listing devices must be done with the lock held since the
 /// operation consists of a write followed by a read of the driver's device table,
 /// which may by invalidated at any point by another thread.
-pub(crate) fn with_global_lock<F, R>(f: F) -> R
+pub fn with_global_lock<F, R>(f: F) -> R
 where
     F: FnOnce() -> R,
 {

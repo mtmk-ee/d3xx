@@ -2,7 +2,7 @@ use std::ffi::c_ulong;
 
 use crate::{try_d3xx, D3xxError};
 
-use super::*;
+use super::{FT_ReadPipe, FT_WritePipe, Result, FT_HANDLE, _OVERLAPPED};
 
 /// Write to a pipe synchronously.
 ///
@@ -16,9 +16,9 @@ pub fn write_pipe(handle: FT_HANDLE, pipe: u8, buf: &[u8]) -> Result<usize> {
         FT_WritePipe(
             handle,
             pipe,
-            buf.as_ptr() as *mut c_uchar,
+            buf.as_ptr().cast_mut(),
             buf.len() as c_ulong,
-            &mut bytes_written as *mut c_ulong,
+            std::ptr::addr_of_mut!(bytes_written),
             std::ptr::null_mut(),
         )
     })?;
@@ -43,9 +43,9 @@ pub fn write_pipe_async(
         FT_WritePipe(
             handle,
             pipe,
-            buf.as_ptr() as *mut c_uchar,
+            buf.as_ptr().cast_mut(),
             buf.len() as c_ulong,
-            &mut bytes_written as *mut c_ulong,
+            std::ptr::addr_of_mut!(bytes_written),
             overlapped as *mut _OVERLAPPED,
         )
     }))
@@ -69,9 +69,9 @@ pub fn write_pipe_async(
         FT_WritePipeAsync(
             handle,
             pipe as u8,
-            buf.as_ptr() as *mut c_uchar,
+            buf.as_ptr().cast_mut(),
             buf.len() as c_ulong,
-            &mut bytes_written as *mut c_ulong,
+            std::ptr::addr_of_mut!(bytes_written),
             overlapped as *mut _OVERLAPPED,
         )
     }))
@@ -89,9 +89,9 @@ pub fn read_pipe(handle: FT_HANDLE, pipe: u8, buf: &mut [u8]) -> Result<usize> {
         FT_ReadPipe(
             handle,
             pipe,
-            buf.as_mut_ptr() as *mut c_uchar,
+            buf.as_mut_ptr().cast::<u8>(),
             buf.len() as c_ulong,
-            &mut bytes_read as *mut c_ulong,
+            std::ptr::addr_of_mut!(bytes_read),
             std::ptr::null_mut(),
         )
     })?;
@@ -111,14 +111,16 @@ pub fn read_pipe_async(
     buf: &mut [u8],
     overlapped: &mut _OVERLAPPED,
 ) -> Result<()> {
+    use std::ffi::c_uchar;
+
     let mut bytes_read: c_ulong = 0;
     ignore_io_pending(try_d3xx!(unsafe {
         FT_ReadPipe(
             handle,
             pipe,
-            buf.as_mut_ptr() as *mut c_uchar,
+            buf.as_mut_ptr().cast::<c_uchar>(),
             buf.len() as c_ulong,
-            &mut bytes_read as *mut c_ulong,
+            std::ptr::addr_of_mut!(bytes_read),
             overlapped as *mut _OVERLAPPED,
         )
     }))
@@ -141,10 +143,10 @@ pub fn read_pipe_async(
     ignore_io_pending(try_d3xx!(unsafe {
         FT_ReadPipeAsync(
             handle,
-            pipe as u8,
-            buf.as_mut_ptr() as *mut c_uchar,
+            pipe,
+            buf.as_mut_ptr().cast::<c_uchar>(),
             buf.len() as c_ulong,
-            &mut bytes_read as *mut c_ulong,
+            std::ptr::addr_of_mut!(bytes_read),
             overlapped as *mut _OVERLAPPED,
         )
     }))
@@ -152,6 +154,7 @@ pub fn read_pipe_async(
 
 /// Filter out `D3xxError::IoPending` errors, since they are expected for
 /// asynchronous I/O operations.
+#[inline]
 fn ignore_io_pending(res: Result<()>) -> Result<()> {
     match res {
         Err(D3xxError::IoPending) => Ok(()),

@@ -21,14 +21,14 @@ impl TryFrom<u8> for Pipe {
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
-            0x82 => Ok(Pipe::In0),
-            0x83 => Ok(Pipe::In1),
-            0x84 => Ok(Pipe::In2),
-            0x85 => Ok(Pipe::In3),
-            0x02 => Ok(Pipe::Out0),
-            0x03 => Ok(Pipe::Out1),
-            0x04 => Ok(Pipe::Out2),
-            0x05 => Ok(Pipe::Out3),
+            0x82 => Ok(Self::In0),
+            0x83 => Ok(Self::In1),
+            0x84 => Ok(Self::In2),
+            0x85 => Ok(Self::In3),
+            0x02 => Ok(Self::Out0),
+            0x03 => Ok(Self::Out1),
+            0x04 => Ok(Self::Out2),
+            0x05 => Ok(Self::Out3),
             _ => Err(()),
         }
     }
@@ -50,10 +50,10 @@ impl TryFrom<ffi::FT_PIPE_TYPE> for PipeType {
 
     fn try_from(value: ffi::FT_PIPE_TYPE) -> Result<Self, Self::Error> {
         match value {
-            ffi::FT_PIPE_TYPE::FTPipeTypeControl => Ok(PipeType::Control),
-            ffi::FT_PIPE_TYPE::FTPipeTypeIsochronous => Ok(PipeType::Isochronous),
-            ffi::FT_PIPE_TYPE::FTPipeTypeBulk => Ok(PipeType::Bulk),
-            ffi::FT_PIPE_TYPE::FTPipeTypeInterrupt => Ok(PipeType::Interrupt),
+            ffi::FT_PIPE_TYPE::FTPipeTypeControl => Ok(Self::Control),
+            ffi::FT_PIPE_TYPE::FTPipeTypeIsochronous => Ok(Self::Isochronous),
+            ffi::FT_PIPE_TYPE::FTPipeTypeBulk => Ok(Self::Bulk),
+            ffi::FT_PIPE_TYPE::FTPipeTypeInterrupt => Ok(Self::Interrupt),
         }
     }
 }
@@ -61,13 +61,13 @@ impl TryFrom<ffi::FT_PIPE_TYPE> for PipeType {
 impl Pipe {
     /// Check if the pipe is an input (read) pipe.
     #[inline]
-    pub fn is_in(self) -> bool {
+    #[must_use] pub fn is_in(self) -> bool {
         !self.is_out()
     }
 
     /// Check if the pipe is an output (write) pipe.
     #[inline]
-    pub fn is_out(self) -> bool {
+    #[must_use] pub fn is_out(self) -> bool {
         (self as u8) & 0x80 == 0
     }
 }
@@ -84,22 +84,22 @@ pub struct PipeInfo {
 
 impl PipeInfo {
     /// The type of pipe.
-    pub fn pipe_type(&self) -> PipeType {
+    #[must_use] pub fn pipe_type(&self) -> PipeType {
         self.pipe_type
     }
 
     /// The pipe identifier.
-    pub fn pipe(&self) -> Pipe {
+    #[must_use] pub fn pipe(&self) -> Pipe {
         self.pipe
     }
 
     /// The maximum packet size in bytes.
-    pub fn max_packet_size(&self) -> usize {
+    #[must_use] pub fn max_packet_size(&self) -> usize {
         self.max_packet_size
     }
 
     /// The polling interval in milliseconds.
-    pub fn interval(&self) -> u8 {
+    #[must_use] pub fn interval(&self) -> u8 {
         self.interval
     }
 }
@@ -149,7 +149,7 @@ pub struct StreamPipes {
 
 impl StreamPipes {
     /// Create a new empty set.
-    pub fn none() -> Self {
+    #[must_use] pub fn none() -> Self {
         Self::default()
     }
 
@@ -157,7 +157,7 @@ impl StreamPipes {
     ///
     /// If a pipe of the same variant already exists the stream size
     /// will be updated.
-    pub fn with_pipe(mut self, pipe: Pipe, stream_size: usize) -> Self {
+    #[must_use] pub fn with_pipe(mut self, pipe: Pipe, stream_size: usize) -> Self {
         self.pipes.insert(pipe, stream_size);
         self
     }

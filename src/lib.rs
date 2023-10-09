@@ -5,8 +5,8 @@
 //! **Note:** this crate is still in early development and is not yet ready for production use.
 //! Feedback and contributions are welcome!
 //!
-//! The D3XX driver provides a low-level interface for interacting with FT60x devices.
-//! It is intended to be used in conjunction with the FT60x "Super Speed" series of ICs, which provide
+//! The D3XX driver provides a low-level interface for interacting with `FT60x` devices.
+//! It is intended to be used in conjunction with the `FT60x` "Super Speed" series of ICs, which provide
 //! a USB 3.0 interface for transferring data at high speeds.
 //!
 //! The primary interface for interacting with devices is the [`Device`] struct. It provides methods

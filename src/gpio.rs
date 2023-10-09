@@ -54,7 +54,7 @@ impl GpioExt for Device {
 
     fn read_gpio(&self, gpio: Gpio) -> Result<Level> {
         let mut value: u32 = 0;
-        try_d3xx!(unsafe { ffi::FT_ReadGPIO(self.handle(), &mut value as *mut u32) })?;
+        try_d3xx!(unsafe { ffi::FT_ReadGPIO(self.handle(), std::ptr::addr_of_mut!(value)) })?;
         Ok(match (value >> (gpio as u32)) & 1 {
             0 => Level::Low,
             1 => Level::High,

@@ -9,7 +9,7 @@ type PhantomUnsync = std::marker::PhantomData<std::cell::Cell<()>>;
 
 /// Handle to a D3XX device.
 ///
-/// The handle is the primary interface for interacting with a FT60x device.
+/// The handle is the primary interface for interacting with a `FT60x` device.
 /// It provides methods for reading, writing, configuration, and more.
 ///
 /// # Example
@@ -72,14 +72,14 @@ impl Device {
     ///
     /// This handle is fairly useless on its own. Although not recommended for typical
     /// users, it may be used with the raw D3XX bindings in the [ffi] module.
-    pub fn handle(&self) -> ffi::FT_HANDLE {
+    #[must_use] pub fn handle(&self) -> ffi::FT_HANDLE {
         self.handle
     }
 
     /// Get the device's serial number.
     ///
     /// This is the serial number that was passed to `Device::open`.
-    pub fn serial_number(&self) -> &str {
+    #[must_use] pub fn serial_number(&self) -> &str {
         &self.serial_number
     }
 
@@ -152,14 +152,14 @@ impl Device {
     /// ```
     pub fn set_stream_pipes(&self, pipes: StreamPipes) -> Result<()> {
         try_d3xx!(unsafe {
-            ffi::FT_ClearStreamPipe(self.handle, true as c_uchar, true as c_uchar, 0)
+            ffi::FT_ClearStreamPipe(self.handle, c_uchar::from(true), c_uchar::from(true), 0)
         })?;
         for (pipe, stream_size) in pipes {
             try_d3xx!(unsafe {
                 ffi::FT_SetStreamPipe(
                     self.handle,
-                    false as c_uchar,
-                    false as c_uchar,
+                    c_uchar::from(false),
+                    c_uchar::from(false),
                     pipe as c_uchar,
                     stream_size.try_into().or(Err(D3xxError::InvalidArgs))?,
                 )
@@ -195,7 +195,7 @@ impl Device {
         try_d3xx!(unsafe {
             ffi::FT_GetPipeTimeout(self.handle, pipe as c_uchar, &mut timeout_ms)
         })?;
-        Ok(Duration::from_millis(timeout_ms as u64))
+        Ok(Duration::from_millis(u64::from(timeout_ms)))
     }
 
     /// Set the timeout for the specified pipe.
@@ -219,8 +219,8 @@ impl Device {
         try_d3xx!(unsafe {
             ffi::FT_GetVIDPID(
                 self.handle,
-                &mut vid as *mut c_ushort,
-                &mut pid as *mut c_ushort,
+                std::ptr::addr_of_mut!(vid),
+                std::ptr::addr_of_mut!(pid),
             )
         })?;
         Ok((vid as usize, pid as usize))
