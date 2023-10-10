@@ -1,6 +1,7 @@
 use std::{
     ffi::{c_void, CString},
     marker::PhantomData,
+    mem::ManuallyDrop,
     ptr::addr_of_mut,
 };
 
@@ -145,9 +146,10 @@ impl Device {
 
     /// Power cycle the device port, causing the device to be re-enumerated by the host.
     pub fn power_cycle_port(self) -> Result<()> {
-        let handle = self.handle;
-        drop(self);
-        try_d3xx!(unsafe { ffi::FT_CycleDevicePort(handle) })?;
+        // No need to run the destructor since the device will be closed when
+        // the port is cycled.
+        let device = ManuallyDrop::new(self);
+        try_d3xx!(unsafe { ffi::FT_CycleDevicePort(device.handle) })?;
         Ok(())
     }
 
