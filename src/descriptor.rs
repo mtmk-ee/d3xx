@@ -89,7 +89,7 @@ pub struct InterfaceDescriptor {
 }
 
 impl InterfaceDescriptor {
-    pub fn new(handle: ffi::FT_HANDLE, index: c_uchar) -> Result<Self> {
+    pub(crate) fn new(handle: ffi::FT_HANDLE, index: c_uchar) -> Result<Self> {
         let mut inner = ffi::FT_INTERFACE_DESCRIPTOR::default();
         try_d3xx!(unsafe { ffi::FT_GetInterfaceDescriptor(handle, index, addr_of_mut!(inner)) })?;
         // See pg. 8: https://ftdichip.com/wp-content/uploads/2020/08/TN_113_Simplified-Description-of-USB-Device-Enumeration.pdf
@@ -147,7 +147,7 @@ pub struct ConfigurationDescriptor {
 }
 
 impl ConfigurationDescriptor {
-    pub fn new(handle: ffi::FT_HANDLE) -> Result<Self> {
+    pub(crate) fn new(handle: ffi::FT_HANDLE) -> Result<Self> {
         let mut inner = ffi::FT_CONFIGURATION_DESCRIPTOR::default();
         try_d3xx!(unsafe { ffi::FT_GetConfigurationDescriptor(handle, addr_of_mut!(inner)) })?;
         // See pg. 7: https://ftdichip.com/wp-content/uploads/2020/08/TN_113_Simplified-Description-of-USB-Device-Enumeration.pdf

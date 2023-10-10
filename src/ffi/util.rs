@@ -14,7 +14,7 @@ use super::{FT_ReadPipe, FT_WritePipe, Result, FT_HANDLE, _OVERLAPPED};
 /// # Panics
 ///
 /// Panics if `buf.len()` exceeds [`std::ffi::c_ulong::MAX`]
-pub fn write_pipe(handle: FT_HANDLE, pipe: u8, buf: &[u8]) -> Result<usize> {
+pub(crate) fn write_pipe(handle: FT_HANDLE, pipe: u8, buf: &[u8]) -> Result<usize> {
     let mut bytes_written: c_ulong = 0;
     try_d3xx!(unsafe {
         FT_WritePipe(
@@ -40,7 +40,7 @@ pub fn write_pipe(handle: FT_HANDLE, pipe: u8, buf: &[u8]) -> Result<usize> {
 /// # Panics
 ///
 /// Panics if `buf.len()` exceeds [`std::ffi::c_ulong::MAX`]
-pub fn write_pipe_async(
+pub(crate) fn write_pipe_async(
     handle: FT_HANDLE,
     pipe: u8,
     buf: &[u8],
@@ -99,7 +99,7 @@ pub fn write_pipe_async(
 /// # Panics
 ///
 /// Panics if `buf.len()` exceeds [`std::ffi::c_ulong::MAX`]
-pub fn read_pipe(handle: FT_HANDLE, pipe: u8, buf: &mut [u8]) -> Result<usize> {
+pub(crate) fn read_pipe(handle: FT_HANDLE, pipe: u8, buf: &mut [u8]) -> Result<usize> {
     let mut bytes_read: c_ulong = 0;
     try_d3xx!(unsafe {
         FT_ReadPipe(
@@ -125,7 +125,7 @@ pub fn read_pipe(handle: FT_HANDLE, pipe: u8, buf: &mut [u8]) -> Result<usize> {
 /// # Panics
 ///
 /// Panics if `buf.len()` exceeds [`std::ffi::c_ulong::MAX`]
-pub fn read_pipe_async(
+pub(crate) fn read_pipe_async(
     handle: FT_HANDLE,
     pipe: u8,
     buf: &mut [u8],
