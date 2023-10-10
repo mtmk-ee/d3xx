@@ -41,24 +41,24 @@
 #![allow(clippy::missing_errors_doc, clippy::module_name_repetitions)]
 
 #[cfg(feature = "config")]
-mod configuration;
-mod descriptor;
+pub mod configuration;
+pub mod descriptor;
 mod device;
 mod error;
-mod ffi;
-pub mod gpio;
+pub mod ffi;
+mod gpio;
 mod overlapped;
 mod pipe;
 mod prelude;
 mod scan;
 
-#[cfg(feature = "config")]
-pub use configuration::*;
-pub use device::*;
-pub use error::*;
-pub use pipe::*;
-pub use prelude::*;
-pub use scan::*;
+pub use device::Device;
+pub(crate) use error::try_d3xx;
+pub use error::{D3xxError, Result};
+pub use gpio::{Direction, Gpio, GpioPin, Level, PullMode};
+pub use overlapped::Overlapped;
+pub use pipe::{Pipe, PipeId, PipeInfo, PipeType};
+pub use scan::{list_devices, DeviceInfo, DeviceType};
 
 /// Get the version of the D3XX library.
 pub fn library_version() -> Result<Version> {

@@ -1,1 +1,4 @@
-pub use crate::{list_devices, Device, Pipe, PipeId};
+pub use crate::{
+    list_devices, D3xxError, Device, Direction, Gpio, GpioPin, Level, Pipe, PipeId, PipeInfo,
+    Result,
+};
