@@ -1,11 +1,13 @@
 use std::{
     ffi::{c_void, CString},
     marker::PhantomData,
+    ptr::addr_of_mut,
 };
 
 use crate::{
+    configuration::ChipConfiguration,
     descriptor::{ConfigurationDescriptor, DeviceDescriptor, InterfaceDescriptor},
-    ffi, try_d3xx, Pipe, PipeId, Result,
+    ffi, try_d3xx, Pipe, PipeId, Result, Version,
 };
 
 type PhantomUnsync = PhantomData<std::cell::Cell<()>>;
@@ -108,6 +110,11 @@ impl Device {
         InterfaceDescriptor::new(self.handle, interface)
     }
 
+    /// Get the chip configuration.
+    pub fn chip_configuration(&self) -> Result<ChipConfiguration> {
+        ChipConfiguration::new(self.handle)
+    }
+
     /// Returns a [`Pipe`] for pipe I/O and configuration.
     ///
     /// # Examples
@@ -127,6 +134,38 @@ impl Device {
     #[must_use]
     pub fn pipe(&self, id: PipeId) -> Pipe {
         Pipe::new(self, id)
+    }
+
+    /// Get the D3XX driver version.
+    pub fn driver_version(&self) -> Result<Version> {
+        let mut version: u32 = 0;
+        try_d3xx!(unsafe { ffi::FT_GetDriverVersion(self.handle, addr_of_mut!(version)) })?;
+        Ok(Version(version))
+    }
+
+    /// Power cycle the device port, causing the device to be re-enumerated by the host.
+    pub fn power_cycle_port(self) -> Result<()> {
+        let handle = self.handle;
+        drop(self);
+        try_d3xx!(unsafe { ffi::FT_CycleDevicePort(handle) })?;
+        Ok(())
+    }
+
+    /// Get the USB selective suspend timeout in milliseconds.
+    pub fn suspend_timeout(&self) -> Result<u32> {
+        let mut timeout: u32 = 0;
+        try_d3xx!(unsafe { ffi::FT_GetSuspendTimeout(self.handle, addr_of_mut!(timeout)) })?;
+        Ok(timeout)
+    }
+
+    /// Set the USB selective suspend timeout.
+    ///
+    /// The timeout is reset to the default of 10 seconds each time
+    /// the device is opened.
+    pub fn set_suspend_timeout(&self, timeout: Option<u32>) -> Result<()> {
+        let timeout = timeout.unwrap_or(0);
+        try_d3xx!(unsafe { ffi::FT_SetSuspendTimeout(self.handle, timeout) })?;
+        Ok(())
     }
 }
 
