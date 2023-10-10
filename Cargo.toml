@@ -14,6 +14,7 @@ homepage = "https://github.com/mtmk-ee/d3xx"
 
 [dependencies]
 libftd3xx-ffi = { version = "0.0.2", features = ["bindgen"] }
+num_enum = "0.7.0"
 thiserror = "1.0.49"
 
 [features]

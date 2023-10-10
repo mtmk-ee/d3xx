@@ -40,6 +40,7 @@
 // Allow missing error documentation since the D3XX documentation is vague about error conditions.
 #![allow(clippy::missing_errors_doc, clippy::module_name_repetitions)]
 
+mod configuration;
 mod descriptor;
 mod device;
 mod error;
