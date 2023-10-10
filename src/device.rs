@@ -7,7 +7,9 @@ use std::{
 
 use crate::{
     descriptor::{ConfigurationDescriptor, DeviceDescriptor, InterfaceDescriptor},
-    ffi, try_d3xx, Pipe, PipeId, Result, Version,
+    ffi,
+    gpio::{Gpio, GpioPin},
+    try_d3xx, Pipe, PipeId, Result, Version,
 };
 
 type PhantomUnsync = PhantomData<std::cell::Cell<()>>;
@@ -118,7 +120,7 @@ impl Device {
 
     /// Returns a [`Pipe`] for pipe I/O and configuration.
     ///
-    /// # Examples
+    /// # Example
     ///
     /// ```no_run
     /// use d3xx::{Device, Pipe, PipeId};
@@ -135,6 +137,26 @@ impl Device {
     #[must_use]
     pub fn pipe(&self, id: PipeId) -> Pipe {
         Pipe::new(self, id)
+    }
+
+    /// Returns a [`Gpio`] for GPIO pin I/O and configuration.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use d3xx::{Device, GpioPin};
+    ///
+    /// let device = Device::open("ABC123").unwrap();
+    ///
+    /// // Write to GPIO pin 0
+    /// device
+    ///    .gpio(GpioPin::Gpio0)
+    ///    .write(d3xx::Level::High)
+    ///    .unwrap()
+    /// ```
+    #[must_use]
+    pub fn gpio(&self, pin: GpioPin) -> Gpio {
+        Gpio::new(self, pin)
     }
 
     /// Get the D3XX driver version.
