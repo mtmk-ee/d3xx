@@ -129,8 +129,11 @@ impl From<&ffi::FT_DEVICE_LIST_INFO_NODE> for DeviceInfo {
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum DeviceType {
+    /// Unknown device type.
     Unknown,
+    /// `FT600` device.
     FT600,
+    /// `FT601` device.
     FT601,
 }
 
