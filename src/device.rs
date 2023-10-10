@@ -5,7 +5,6 @@ use std::{
 };
 
 use crate::{
-    configuration::ChipConfiguration,
     descriptor::{ConfigurationDescriptor, DeviceDescriptor, InterfaceDescriptor},
     ffi, try_d3xx, Pipe, PipeId, Result, Version,
 };
@@ -111,8 +110,9 @@ impl Device {
     }
 
     /// Get the chip configuration.
-    pub fn chip_configuration(&self) -> Result<ChipConfiguration> {
-        ChipConfiguration::new(self.handle)
+    #[cfg(feature = "config")]
+    pub fn chip_configuration(&self) -> Result<crate::ChipConfiguration> {
+        crate::ChipConfiguration::new(self.handle)
     }
 
     /// Returns a [`Pipe`] for pipe I/O and configuration.
