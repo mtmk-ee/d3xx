@@ -56,7 +56,6 @@ pub use device::Device;
 pub(crate) use error::try_d3xx;
 pub use error::{D3xxError, Result};
 pub use gpio::{Direction, Gpio, GpioPin, Level, PullMode};
-pub use overlapped::Overlapped;
 pub use pipe::{Pipe, PipeId, PipeInfo, PipeType};
 pub use scan::{list_devices, DeviceInfo, DeviceType};
 
