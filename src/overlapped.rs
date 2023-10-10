@@ -42,6 +42,7 @@ impl<'a> Overlapped<'a> {
 
     /// Get a reference to the underlying `FT_OVERLAPPED` structure.
     #[inline]
+    #[must_use]
     #[allow(unused)]
     pub fn inner(&self) -> &ffi::_OVERLAPPED {
         &self.overlapped

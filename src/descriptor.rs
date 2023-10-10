@@ -30,41 +30,49 @@ impl DeviceDescriptor {
     }
 
     /// The device serial number.
+    #[must_use]
     pub fn serial_number(&self) -> &str {
         &self.serial_number
     }
 
     /// Human-readable manufacturer name.
+    #[must_use]
     pub fn manufacturer(&self) -> &str {
         &self.manufacturer
     }
 
     /// Human-readable product name.
+    #[must_use]
     pub fn product(&self) -> &str {
         &self.product
     }
 
     /// The vendor ID.
+    #[must_use]
     pub fn vendor_id(&self) -> usize {
         usize::from(self.inner.idVendor)
     }
 
     /// The product ID.
+    #[must_use]
     pub fn product_id(&self) -> usize {
         usize::from(self.inner.idProduct)
     }
 
     /// The USB protocol version (e.g. USB 2.0)
+    #[must_use]
     pub fn usb_version(&self) -> UsbVersion {
         UsbVersion(usize::from(self.inner.bcdUSB))
     }
 
     /// The maximum size, in bytes, of a packet for an endpoint.
+    #[must_use]
     pub fn max_packet_size(&self) -> usize {
         usize::from(self.inner.bMaxPacketSize0)
     }
 
     /// Device class codes
+    #[must_use]
     pub fn class_codes(&self) -> ClassCodes {
         ClassCodes::new(
             self.inner.bDeviceClass,
@@ -94,11 +102,13 @@ impl InterfaceDescriptor {
         })
     }
 
+    #[must_use]
     pub fn interface_number(&self) -> usize {
         usize::from(self.inner.bInterfaceNumber)
     }
 
     /// Interface class codes.
+    #[must_use]
     pub fn class_codes(&self) -> ClassCodes {
         ClassCodes::new(
             self.inner.bInterfaceClass,
@@ -108,16 +118,19 @@ impl InterfaceDescriptor {
     }
 
     /// The number of endpoints used by this interface.
+    #[must_use]
     pub fn endpoints(&self) -> usize {
         usize::from(self.inner.bNumEndpoints)
     }
 
     /// The interface number.
+    #[must_use]
     pub fn alternate_setting(&self) -> u8 {
         self.inner.bAlternateSetting
     }
 
     /// A human-readable description of the interface.
+    #[must_use]
     pub fn description(&self) -> &str {
         &self.description
     }
@@ -147,32 +160,38 @@ impl ConfigurationDescriptor {
     }
 
     /// The number of interfaces supported in this configuration.
+    #[must_use]
     pub fn interfaces(&self) -> usize {
         usize::from(self.inner.bNumInterfaces)
     }
 
     /// The configuration number.
+    #[must_use]
     pub fn configuration_value(&self) -> u8 {
         self.inner.bConfigurationValue
     }
 
     /// The configuration description.
+    #[must_use]
     pub fn description(&self) -> &str {
         &self.description
     }
 
     /// The maximum power consumption of the device in milliamps.
+    #[must_use]
     pub fn max_power(&self) -> u8 {
         // the value is in 2mA units
         self.inner.MaxPower * 2
     }
 
     /// Whether the device is self-powered.
+    #[must_use]
     pub fn self_powered(&self) -> bool {
         self.inner.bmAttributes & 0b0100_0000 != 0
     }
 
     /// Whether the device supports remote wakeup.
+    #[must_use]
     pub fn remote_wakeup(&self) -> bool {
         self.inner.bmAttributes & 0b0010_0000 != 0
     }
@@ -181,10 +200,12 @@ impl ConfigurationDescriptor {
 pub struct UsbVersion(usize);
 
 impl UsbVersion {
+    #[must_use]
     pub fn major(&self) -> usize {
         self.0 >> 8
     }
 
+    #[must_use]
     pub fn minor(&self) -> usize {
         self.0 & 0xFF
     }
@@ -209,16 +230,19 @@ impl ClassCodes {
     }
 
     /// Class code (assigned by USB-IF)
+    #[must_use]
     pub fn class(&self) -> u8 {
         self.class
     }
 
     /// Subclass code (assigned by USB-IF)
+    #[must_use]
     pub fn subclass(&self) -> u8 {
         self.subclass
     }
 
     /// Protocol code (assigned by USB-IF)
+    #[must_use]
     pub fn protocol(&self) -> u8 {
         self.protocol
     }
