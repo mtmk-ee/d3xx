@@ -18,6 +18,7 @@ impl StringDescriptor {
     }
 
     /// Manufacturer name.
+    #[must_use]
     pub fn manufacturer(&self) -> &str {
         &self.manufacturer
     }
@@ -31,6 +32,7 @@ impl StringDescriptor {
     }
 
     /// Product name.
+    #[must_use]
     pub fn product(&self) -> &str {
         &self.product
     }
@@ -44,6 +46,7 @@ impl StringDescriptor {
     }
 
     /// Serial number.
+    #[must_use]
     pub fn serial_number(&self) -> &str {
         &self.serial_number
     }
@@ -72,7 +75,7 @@ impl StringDescriptor {
         String::from_utf16_lossy(&wide_chars)
     }
 
-    pub fn as_ffi_descriptor(&self) -> [u8; 128] {
+    pub(crate) fn as_ffi_descriptor(&self) -> [u8; 128] {
         fn set_part(slice: &mut [u8], s: &[u8]) {
             // unwrap is safe because the length of the string is always <= 62
             slice[0] = u8::try_from(s.len() + 2).unwrap();
