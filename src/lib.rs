@@ -58,6 +58,7 @@ mod device;
 mod error;
 pub mod ffi;
 mod gpio;
+pub mod notification;
 mod overlapped;
 mod pipe;
 mod prelude;

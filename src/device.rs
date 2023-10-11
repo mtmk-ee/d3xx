@@ -1,5 +1,6 @@
 use std::{
     ffi::{c_void, CString},
+    fmt::Debug,
     marker::PhantomData,
     mem::ManuallyDrop,
     ptr::addr_of_mut,
@@ -9,6 +10,7 @@ use crate::{
     descriptor::{ConfigurationDescriptor, DeviceDescriptor, InterfaceDescriptor},
     ffi,
     gpio::{Gpio, GpioPin},
+    notification::{clear_notification_callback, set_notification_callback, Notification},
     try_d3xx, Pipe, PipeId, Result, Version,
 };
 
@@ -198,6 +200,29 @@ impl Device {
         let timeout = timeout.unwrap_or(0);
         try_d3xx!(unsafe { ffi::FT_SetSuspendTimeout(self.handle, timeout) })?;
         Ok(())
+    }
+
+    /// Set the notification callback.
+    ///
+    /// The callback is invoked by the driver once a notification is received about
+    /// data availability on a notification-enabled pipe. Pipes should not be read
+    /// outside of the callback when notifications are enabled.
+    ///
+    /// See page 42 for more information:
+    /// <https://ftdichip.com/wp-content/uploads/2020/07/AN_379-D3xx-Programmers-Guide-1.pdf>
+    pub fn set_notification_callback<F, T>(&self, callback: F, context: Option<T>) -> Result<()>
+    where
+        F: Fn(Notification<T>) + 'static,
+    {
+        set_notification_callback(self.handle, callback, context)
+    }
+
+    /// Clear a previously-set notification callback.
+    pub fn clear_notification_callback(&self) {
+        // SAFETY: the handle exists
+        unsafe {
+            clear_notification_callback(self.handle);
+        }
     }
 }
 
