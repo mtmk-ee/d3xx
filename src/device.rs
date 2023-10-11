@@ -11,7 +11,7 @@ use crate::{
     ffi,
     gpio::{Gpio, GpioPin},
     notification::{clear_notification_callback, set_notification_callback, Notification},
-    try_d3xx, Pipe, PipeId, Result, Version,
+    try_d3xx, Pipe, PipeIo, Result, Version,
 };
 
 type PhantomUnsync = PhantomData<std::cell::Cell<()>>;
@@ -25,20 +25,20 @@ type PhantomUnsync = PhantomData<std::cell::Cell<()>>;
 ///
 /// ```no_run
 /// use std::io::{Read, Write};
-/// use d3xx::{Device, Pipe, PipeId};
+/// use d3xx::{Device, Pipe};
 ///
 /// let device = Device::open("ABC123").unwrap();
 ///
 /// // Read 1024 bytes from input pipe 1
 /// let mut buf = vec![0u8; 1024];
 /// device
-///     .pipe(PipeId::In1)
+///     .pipe(Pipe::In1)
 ///     .read(&mut buf)
 ///     .unwrap();
 ///
 /// // Write 1024 bytes to output pipe 1
 /// device
-///     .pipe(PipeId::Out1)
+///     .pipe(Pipe::Out1)
 ///     .write(&buf)
 ///     .unwrap();
 /// ```
@@ -133,20 +133,20 @@ impl Device {
     ///
     /// ```no_run
     /// use std::io::Write;
-    /// use d3xx::{Device, Pipe, PipeId};
+    /// use d3xx::{Device, Pipe};
     ///
     /// let device = Device::open("ABC123").unwrap();
     ///
     /// // Write to output pipe 1
     /// let mut buf = vec![0u8; 1024];
     /// device
-    ///     .pipe(PipeId::Out1)
+    ///     .pipe(Pipe::Out1)
     ///     .write(&buf)
     ///     .unwrap();
     /// ```
     #[must_use]
-    pub fn pipe(&self, id: PipeId) -> Pipe {
-        Pipe::new(self, id)
+    pub fn pipe(&self, id: Pipe) -> PipeIo {
+        PipeIo::new(self, id)
     }
 
     /// Returns a [`Gpio`] for GPIO pin I/O and configuration.

@@ -14,11 +14,20 @@ a USB 3.0 interface for transferring data at high speeds.
 The primary interface for interacting with devices is the [`Device`] struct. It provides methods
 for reading, writing, configuration, and more. See the [`Device`] documentation for more details.
 
+# Features
+
+- Searching for connected devices
+- Reading and writing to pipes
+- Asynchronous pipe transfers
+- GPIO control
+- Reading device attributes and configuration
+- Driver notification callbacks
+
 # Simple Example
 
 ```rust
 use std::io::{Read, Write};
-use d3xx::{list_devices, Pipe, PipeId};
+use d3xx::{list_devices, Pipe};
 
 // Scan for connected devices.
 let all_devices = list_devices().expect("failed to list devices");
@@ -29,16 +38,13 @@ let device = all_devices[0].open().expect("failed to open device");
 // Read 1024 bytes from input pipe 1
 let mut buf = vec![0; 1024];
 device
-    .pipe(PipeId::In1)
+    .pipe(Pipe::In1)
     .read(&mut buf)
     .expect("failed to read from pipe");
 
 // Write 1024 bytes to output pipe 2
 device
-    .pipe(PipeId::Out2)
+    .pipe(Pipe::Out2)
     .write(&buf)
     .expect("failed to write to pipe");
-```
-
-
 ```

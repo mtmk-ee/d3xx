@@ -21,25 +21,25 @@ type PhantomLifetime<'a> = PhantomData<&'a ()>;
 ///
 /// ```no_run
 /// use std::io::Write;
-/// use d3xx::{Device, Pipe, PipeId};
+/// use d3xx::{Device, Pipe};
 ///
 /// let device = Device::open("ABC123").unwrap();
 ///
 /// // Write to output pipe 1
 /// let mut buf = vec![0u8; 1024];
 /// device
-///    .pipe(PipeId::Out1)
+///    .pipe(Pipe::Out1)
 ///    .write(&buf)
 ///    .unwrap();
 /// ```
-pub struct Pipe<'a> {
+pub struct PipeIo<'a> {
     handle: ffi::FT_HANDLE,
-    id: PipeId,
+    id: Pipe,
     _lifetime_constraint: PhantomLifetime<'a>,
 }
 
-impl<'a> Pipe<'a> {
-    pub(crate) fn new(device: &'a Device, id: PipeId) -> Self {
+impl<'a> PipeIo<'a> {
+    pub(crate) fn new(device: &'a Device, id: Pipe) -> Self {
         Self {
             handle: device.handle(),
             id,
@@ -49,7 +49,7 @@ impl<'a> Pipe<'a> {
 
     /// Get the pipe ID.
     #[must_use]
-    pub fn id(&self) -> PipeId {
+    pub fn id(&self) -> Pipe {
         self.id
     }
 
@@ -162,7 +162,7 @@ impl<'a> Pipe<'a> {
     }
 }
 
-impl<'a> Write for Pipe<'a> {
+impl<'a> Write for PipeIo<'a> {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         let res = ffi::util::write_pipe(self.handle, u8::from(self.id), buf);
         Ok(self.maybe_abort(res)?)
@@ -174,7 +174,7 @@ impl<'a> Write for Pipe<'a> {
     }
 }
 
-impl<'a> Read for Pipe<'a> {
+impl<'a> Read for PipeIo<'a> {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         let res = ffi::util::read_pipe(self.handle, u8::from(self.id), buf);
         Ok(self.maybe_abort(res)?)
@@ -200,7 +200,7 @@ pub enum Endpoint {
 /// Identifies a unique read/write pipe on a device.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, TryFromPrimitive, IntoPrimitive)]
 #[repr(u8)]
-pub enum PipeId {
+pub enum Pipe {
     /// Input pipe 0.
     In0 = 0x82,
     /// Input pipe 1.
@@ -219,7 +219,7 @@ pub enum PipeId {
     Out3 = 0x05,
 }
 
-impl PipeId {
+impl Pipe {
     /// Check if the pipe is an input (read) pipe.
     #[inline]
     #[must_use]
@@ -292,43 +292,43 @@ mod tests {
 
     #[test]
     fn pipeid_try_from() {
-        assert_eq!(PipeId::try_from(0x82), Ok(PipeId::In0));
-        assert_eq!(PipeId::try_from(0x83), Ok(PipeId::In1));
-        assert_eq!(PipeId::try_from(0x84), Ok(PipeId::In2));
-        assert_eq!(PipeId::try_from(0x85), Ok(PipeId::In3));
-        assert_eq!(PipeId::try_from(0x02), Ok(PipeId::Out0));
-        assert_eq!(PipeId::try_from(0x03), Ok(PipeId::Out1));
-        assert_eq!(PipeId::try_from(0x04), Ok(PipeId::Out2));
-        assert_eq!(PipeId::try_from(0x05), Ok(PipeId::Out3));
-        assert!(PipeId::try_from(0x00).is_err());
-        assert!(PipeId::try_from(0x01).is_err());
-        assert!(PipeId::try_from(0x06).is_err());
-        assert!(PipeId::try_from(0x81).is_err());
-        assert!(PipeId::try_from(0x86).is_err());
-        assert!(PipeId::try_from(0xFF).is_err());
+        assert_eq!(Pipe::try_from(0x82), Ok(Pipe::In0));
+        assert_eq!(Pipe::try_from(0x83), Ok(Pipe::In1));
+        assert_eq!(Pipe::try_from(0x84), Ok(Pipe::In2));
+        assert_eq!(Pipe::try_from(0x85), Ok(Pipe::In3));
+        assert_eq!(Pipe::try_from(0x02), Ok(Pipe::Out0));
+        assert_eq!(Pipe::try_from(0x03), Ok(Pipe::Out1));
+        assert_eq!(Pipe::try_from(0x04), Ok(Pipe::Out2));
+        assert_eq!(Pipe::try_from(0x05), Ok(Pipe::Out3));
+        assert!(Pipe::try_from(0x00).is_err());
+        assert!(Pipe::try_from(0x01).is_err());
+        assert!(Pipe::try_from(0x06).is_err());
+        assert!(Pipe::try_from(0x81).is_err());
+        assert!(Pipe::try_from(0x86).is_err());
+        assert!(Pipe::try_from(0xFF).is_err());
     }
 
     #[test]
     fn pipe_is_in() {
-        assert!(PipeId::In0.is_in());
-        assert!(PipeId::In1.is_in());
-        assert!(PipeId::In2.is_in());
-        assert!(PipeId::In3.is_in());
-        assert!(!PipeId::Out0.is_in());
-        assert!(!PipeId::Out1.is_in());
-        assert!(!PipeId::Out2.is_in());
-        assert!(!PipeId::Out3.is_in());
+        assert!(Pipe::In0.is_in());
+        assert!(Pipe::In1.is_in());
+        assert!(Pipe::In2.is_in());
+        assert!(Pipe::In3.is_in());
+        assert!(!Pipe::Out0.is_in());
+        assert!(!Pipe::Out1.is_in());
+        assert!(!Pipe::Out2.is_in());
+        assert!(!Pipe::Out3.is_in());
     }
 
     #[test]
     fn pipe_is_out() {
-        assert!(!PipeId::In0.is_out());
-        assert!(!PipeId::In1.is_out());
-        assert!(!PipeId::In2.is_out());
-        assert!(!PipeId::In3.is_out());
-        assert!(PipeId::Out0.is_out());
-        assert!(PipeId::Out1.is_out());
-        assert!(PipeId::Out2.is_out());
-        assert!(PipeId::Out3.is_out());
+        assert!(!Pipe::In0.is_out());
+        assert!(!Pipe::In1.is_out());
+        assert!(!Pipe::In2.is_out());
+        assert!(!Pipe::In3.is_out());
+        assert!(Pipe::Out0.is_out());
+        assert!(Pipe::Out1.is_out());
+        assert!(Pipe::Out2.is_out());
+        assert!(Pipe::Out3.is_out());
     }
 }

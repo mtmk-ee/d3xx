@@ -16,7 +16,7 @@
 //!
 //! ```no_run
 //! use std::io::{Read, Write};
-//! use d3xx::{list_devices, Pipe, PipeId};
+//! use d3xx::{list_devices, Pipe};
 //!
 //! // Scan for connected devices.
 //! let all_devices = list_devices().expect("failed to list devices");
@@ -27,13 +27,13 @@
 //! // Read 1024 bytes from input pipe 1
 //! let mut buf = vec![0; 1024];
 //! device
-//!     .pipe(PipeId::In1)
+//!     .pipe(Pipe::In1)
 //!     .read(&mut buf)
 //!     .expect("failed to read from pipe");
 //!
 //! // Write 1024 bytes to output pipe 2
 //! device
-//!     .pipe(PipeId::Out2)
+//!     .pipe(Pipe::Out2)
 //!     .write(&buf)
 //!     .expect("failed to write to pipe");
 //! ```
@@ -68,7 +68,7 @@ pub use device::Device;
 pub(crate) use error::try_d3xx;
 pub use error::{D3xxError, Result};
 pub use gpio::{Direction, Gpio, GpioPin, Level, PullMode};
-pub use pipe::{Endpoint, Pipe, PipeId, PipeType};
+pub use pipe::{Endpoint, Pipe, PipeIo, PipeType};
 pub use scan::{list_devices, DeviceInfo, DeviceType};
 
 /// Get the version of the D3XX library.

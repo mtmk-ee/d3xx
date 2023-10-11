@@ -1,4 +1,4 @@
-use crate::PipeId;
+use crate::Pipe;
 
 /// Optional features.
 pub struct OptionalFeatures {
@@ -45,13 +45,13 @@ impl OptionalFeatures {
     }
 
     #[must_use]
-    pub fn notification_message_enabled(&self, in_pipe: PipeId) -> bool {
+    pub fn notification_message_enabled(&self, in_pipe: Pipe) -> bool {
         assert!(in_pipe.is_in());
         self.flags & (0b0000_0100 << in_pipe as u16) != 0
     }
 
     #[must_use]
-    pub fn underrun_disabled(&self, in_pipe: PipeId) -> bool {
+    pub fn underrun_disabled(&self, in_pipe: Pipe) -> bool {
         assert!(in_pipe.is_in());
         self.flags & (0b0100_0000 << in_pipe as u16) != 0
     }

@@ -22,7 +22,7 @@ use std::{
     ptr::addr_of_mut,
 };
 
-use crate::{ffi, try_d3xx, D3xxError, PipeId, PipeType, Result};
+use crate::{ffi, try_d3xx, D3xxError, Pipe, PipeType, Result};
 
 /// A USB device descriptor.
 pub struct DeviceDescriptor {
@@ -241,7 +241,7 @@ impl UsbVersion {
 /// <https://www.keil.com/pack/doc/mw/USB/html/_u_s_b__endpoint__descriptor.html>
 pub struct PipeInfo {
     pipe_type: PipeType,
-    pipe: PipeId,
+    pipe: Pipe,
     max_packet_size: usize,
     interval: u8,
 }
@@ -250,7 +250,7 @@ impl PipeInfo {
     pub(crate) fn new(info: ffi::FT_PIPE_INFORMATION) -> Result<Self> {
         Ok(Self {
             pipe_type: PipeType::try_from(info.PipeType).or(Err(D3xxError::OtherError))?,
-            pipe: PipeId::try_from(info.PipeId).or(Err(D3xxError::OtherError))?,
+            pipe: Pipe::try_from(info.PipeId).or(Err(D3xxError::OtherError))?,
             max_packet_size: info.MaximumPacketSize as usize,
             interval: info.Interval,
         })
@@ -264,7 +264,7 @@ impl PipeInfo {
 
     /// The pipe ID.
     #[must_use]
-    pub fn id(&self) -> PipeId {
+    pub fn id(&self) -> Pipe {
         self.pipe
     }
 
@@ -329,7 +329,7 @@ fn descriptor_string(handle: ffi::FT_HANDLE, index: c_uchar) -> Result<String> {
 
 #[cfg(test)]
 mod test {
-    use crate::{descriptor::PipeInfo, ffi, PipeId, PipeType};
+    use crate::{descriptor::PipeInfo, ffi, Pipe, PipeType};
 
     #[test]
     fn pipe_info_try_from() {
@@ -341,7 +341,7 @@ mod test {
         };
         let info = PipeInfo::new(info).unwrap();
         assert_eq!(info.pipe_type(), PipeType::Control);
-        assert_eq!(info.id(), PipeId::In0);
+        assert_eq!(info.id(), Pipe::In0);
         assert_eq!(info.max_packet_size(), 64);
         assert_eq!(info.interval(), 0);
     }
