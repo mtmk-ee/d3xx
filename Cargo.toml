@@ -20,6 +20,3 @@ thiserror = "1.0.49"
 [features]
 static = ["libftd3xx-ffi/static"]
 config = []
-
-[build-dependencies]
-bindgen = "0.65.1"
