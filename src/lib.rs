@@ -15,19 +15,30 @@
 //! # Simple Example
 //!
 //! ```no_run
-//! use d3xx::{Device, Pipe};
+//! use std::io::{Read, Write};
+//! use d3xx::{list_devices, Pipe, PipeId};
 //!
-//! let device = Device::open("ABC123").unwrap();
+//! // Scan for connected devices.
+//! let all_devices = list_devices().expect("failed to list devices");
+//!
+//! /// Open the first device found.
+//! let device = all_devices[0].open().expect("failed to open device");
 //!
 //! // Read 1024 bytes from input pipe 1
-//! let mut buf = vec![0u8; 1024];
-//! device.read(Pipe::In1, &mut buf).unwrap();
+//! let mut buf = vec![0; 1024];
+//! device
+//!     .pipe(PipeId::In1)
+//!     .read(&mut buf)
+//!     .expect("failed to read from pipe");
 //!
-//! // Write 1024 bytes to output pipe 1
-//! device.write(Pipe::Out1, &buf).unwrap();
+//! // Write 1024 bytes to output pipe 2
+//! device
+//!     .pipe(PipeId::Out2)
+//!     .write(&buf)
+//!     .expect("failed to write to pipe");
 //! ```
 //!
-//! //! # Error Handling
+//! # Error Handling
 //!
 //! The documentation on most functions returning a `Result<T, D3xxError>` does not include an
 //! explanation about the error conditions. This is because the D3XX documentation is vague,

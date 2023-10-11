@@ -1,3 +1,6 @@
+//! Wrapper around the `FT_OVERLAPPED` structure.
+//!
+//! The [`Overlapped`] structure is used to perform asynchronous I/O operations.
 use std::{ffi::c_ulong, future::Future, marker::PhantomData, mem::MaybeUninit};
 
 use crate::{ffi, try_d3xx, D3xxError, Result};
@@ -20,6 +23,7 @@ pub struct Overlapped<'a> {
     handle: ffi::HANDLE,
     /// Underlying `FT_OVERLAPPED` structure.
     overlapped: ffi::_OVERLAPPED,
+    /// Ties the lifetime of this struct to the lifetime of the source [`Device`](crate::Device) instance.
     _lifetime_constraint: PhantomLifetime<'a>,
 }
 

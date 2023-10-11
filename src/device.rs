@@ -22,16 +22,23 @@ type PhantomUnsync = PhantomData<std::cell::Cell<()>>;
 /// # Example
 ///
 /// ```no_run
-/// use d3xx::{Device, Pipe};
+/// use std::io::{Read, Write};
+/// use d3xx::{Device, Pipe, PipeId};
 ///
 /// let device = Device::open("ABC123").unwrap();
 ///
 /// // Read 1024 bytes from input pipe 1
 /// let mut buf = vec![0u8; 1024];
-/// device.read(Pipe::In1, &mut buf).unwrap();
+/// device
+///     .pipe(PipeId::In1)
+///     .read(&mut buf)
+///     .unwrap();
 ///
 /// // Write 1024 bytes to output pipe 1
-/// device.write(Pipe::Out1, &buf).unwrap();
+/// device
+///     .pipe(PipeId::Out1)
+///     .write(&buf)
+///     .unwrap();
 /// ```
 #[derive(Debug)]
 pub struct Device {
@@ -123,6 +130,7 @@ impl Device {
     /// # Example
     ///
     /// ```no_run
+    /// use std::io::Write;
     /// use d3xx::{Device, Pipe, PipeId};
     ///
     /// let device = Device::open("ABC123").unwrap();
@@ -150,7 +158,7 @@ impl Device {
     ///
     /// // Write to GPIO pin 0
     /// device
-    ///    .gpio(GpioPin::Gpio0)
+    ///    .gpio(GpioPin::Pin0)
     ///    .write(d3xx::Level::High)
     ///    .unwrap()
     /// ```

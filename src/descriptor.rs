@@ -120,6 +120,7 @@ impl InterfaceDescriptor {
         })
     }
 
+    /// The interface this descriptor describes.
     #[must_use]
     pub fn interface_number(&self) -> usize {
         usize::from(self.inner.bInterfaceNumber)
@@ -215,14 +216,17 @@ impl ConfigurationDescriptor {
     }
 }
 
+/// USB protocol version.
 pub struct UsbVersion(usize);
 
 impl UsbVersion {
+    /// Major version number.
     #[must_use]
     pub fn major(&self) -> usize {
         self.0 >> 8
     }
 
+    /// Minor version number.
     #[must_use]
     pub fn minor(&self) -> usize {
         self.0 & 0xFF
@@ -231,7 +235,7 @@ impl UsbVersion {
 
 /// Information about a pipe on a device.
 ///
-/// This is returned by [`Device::pipe_info`].
+/// This is returned by [`Pipe::descriptor`](crate::Pipe::descriptor).
 ///
 /// See for more information:
 /// <https://www.keil.com/pack/doc/mw/USB/html/_u_s_b__endpoint__descriptor.html>

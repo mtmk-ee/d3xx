@@ -20,6 +20,7 @@ type PhantomLifetime<'a> = PhantomData<&'a ()>;
 /// # Examples
 ///
 /// ```no_run
+/// use std::io::Write;
 /// use d3xx::{Device, Pipe, PipeId};
 ///
 /// let device = Device::open("ABC123").unwrap();

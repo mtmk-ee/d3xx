@@ -17,6 +17,7 @@ for reading, writing, configuration, and more. See the [`Device`] documentation 
 # Simple Example
 
 ```rust
+use std::io::{Read, Write};
 use d3xx::{list_devices, Pipe, PipeId};
 
 // Scan for connected devices.

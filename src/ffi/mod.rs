@@ -1,4 +1,9 @@
-pub mod util;
+//! Re-export of the `libftd3xx-ffi` crate.
+//!
+//! This module contains the raw FTDI D3XX driver bindings. Most users will not need to use
+//! this module directly, and should instead use the higher-level abstractions provided by
+//! the rest of the crate.
+pub(crate) mod util;
 
 use std::{panic::catch_unwind, sync::Mutex};
 
@@ -43,4 +48,17 @@ mod tests {
         let _guard = unsafe { GLOBAL_LOCK.lock().unwrap() };
         assert!(unsafe { GLOBAL_LOCK.try_lock() }.is_err());
     }
+
+    // #[test]
+    // fn test_global_lock_panic() {
+    //     let _guard = unsafe { GLOBAL_LOCK.lock().unwrap() };
+    //     assert!(unsafe { GLOBAL_LOCK.try_lock() }.is_err());
+    //     let result = std::panic::catch_unwind(|| {
+    //         with_global_lock(|| {
+    //             panic!("test panic");
+    //         });
+    //     });
+    //     assert!(result.is_err());
+    //     assert!(unsafe { GLOBAL_LOCK.try_lock().is_ok() });
+    // }
 }
