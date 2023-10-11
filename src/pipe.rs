@@ -181,6 +181,22 @@ impl<'a> Read for Pipe<'a> {
     }
 }
 
+/// Identifies a unique endpoint on a device.
+///
+/// An endpoint has up to two corresponding pipes: one for input and one for output.
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, TryFromPrimitive, IntoPrimitive)]
+#[repr(u8)]
+pub enum Endpoint {
+    /// Endpoint 0.
+    Endpoint0,
+    /// Endpoint 1.
+    Endpoint1,
+    /// Endpoint 2.
+    Endpoint2,
+    /// Endpoint 3.
+    Endpoint3,
+}
+
 /// Identifies a unique read/write pipe on a device.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, TryFromPrimitive, IntoPrimitive)]
 #[repr(u8)]
@@ -201,6 +217,33 @@ pub enum PipeId {
     Out2 = 0x04,
     /// Output pipe 3.
     Out3 = 0x05,
+}
+
+impl PipeId {
+    /// Check if the pipe is an input (read) pipe.
+    #[inline]
+    #[must_use]
+    pub fn is_in(self) -> bool {
+        !self.is_out()
+    }
+
+    /// Check if the pipe is an output (write) pipe.
+    #[inline]
+    #[must_use]
+    pub fn is_out(self) -> bool {
+        (self as u8) & 0x80 == 0
+    }
+
+    /// Get the endpoint corresponding to this pipe.
+    #[must_use]
+    pub fn endpoint(self) -> Endpoint {
+        match self {
+            Self::In0 | Self::Out0 => Endpoint::Endpoint0,
+            Self::In1 | Self::Out1 => Endpoint::Endpoint1,
+            Self::In2 | Self::Out2 => Endpoint::Endpoint2,
+            Self::In3 | Self::Out3 => Endpoint::Endpoint3,
+        }
+    }
 }
 
 /// The type of a pipe.
@@ -240,22 +283,6 @@ impl TryFrom<ffi::FT_PIPE_TYPE> for PipeType {
             ffi::FT_PIPE_TYPE::FTPipeTypeBulk => Ok(Self::Bulk),
             ffi::FT_PIPE_TYPE::FTPipeTypeInterrupt => Ok(Self::Interrupt),
         }
-    }
-}
-
-impl PipeId {
-    /// Check if the pipe is an input (read) pipe.
-    #[inline]
-    #[must_use]
-    pub fn is_in(self) -> bool {
-        !self.is_out()
-    }
-
-    /// Check if the pipe is an output (write) pipe.
-    #[inline]
-    #[must_use]
-    pub fn is_out(self) -> bool {
-        (self as u8) & 0x80 == 0
     }
 }
 

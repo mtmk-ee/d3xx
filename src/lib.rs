@@ -67,7 +67,7 @@ pub use device::Device;
 pub(crate) use error::try_d3xx;
 pub use error::{D3xxError, Result};
 pub use gpio::{Direction, Gpio, GpioPin, Level, PullMode};
-pub use pipe::{Pipe, PipeId, PipeType};
+pub use pipe::{Endpoint, Pipe, PipeId, PipeType};
 pub use scan::{list_devices, DeviceInfo, DeviceType};
 
 /// Get the version of the D3XX library.
