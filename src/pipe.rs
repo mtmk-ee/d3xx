@@ -6,7 +6,9 @@ use std::{
 
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
-use crate::{ffi, overlapped::Overlapped, try_d3xx, D3xxError, Device, Result};
+use crate::{
+    descriptor::PipeInfo, ffi, overlapped::Overlapped, try_d3xx, D3xxError, Device, Result,
+};
 
 type PhantomLifetime<'a> = PhantomData<&'a ()>;
 
@@ -59,7 +61,7 @@ impl<'a> Pipe<'a> {
         try_d3xx!(unsafe {
             ffi::FT_GetPipeInformation(self.handle, INTERFACE_INDEX, u8::from(self.id), &mut info)
         })?;
-        PipeInfo::try_from(info)
+        PipeInfo::new(info)
     }
 
     /// Set the stream size for this pipe.
@@ -256,56 +258,6 @@ impl PipeId {
     }
 }
 
-/// Information about a pipe on a device.
-///
-/// This is returned by [`Device::pipe_info`].
-#[allow(clippy::module_name_repetitions)]
-pub struct PipeInfo {
-    pipe_type: PipeType,
-    pipe: PipeId,
-    max_packet_size: usize,
-    interval: u8,
-}
-
-impl PipeInfo {
-    /// The type of pipe.
-    #[must_use]
-    pub fn pipe_type(&self) -> PipeType {
-        self.pipe_type
-    }
-
-    /// The pipe ID.
-    #[must_use]
-    pub fn id(&self) -> PipeId {
-        self.pipe
-    }
-
-    /// The maximum packet size in bytes.
-    #[must_use]
-    pub fn max_packet_size(&self) -> usize {
-        self.max_packet_size
-    }
-
-    /// The polling interval in milliseconds.
-    #[must_use]
-    pub fn interval(&self) -> u8 {
-        self.interval
-    }
-}
-
-impl TryFrom<ffi::FT_PIPE_INFORMATION> for PipeInfo {
-    type Error = D3xxError;
-
-    fn try_from(value: ffi::FT_PIPE_INFORMATION) -> Result<Self, Self::Error> {
-        Ok(Self {
-            pipe_type: PipeType::try_from(value.PipeType).or(Err(D3xxError::OtherError))?,
-            pipe: PipeId::try_from(value.PipeId).or(Err(D3xxError::OtherError))?,
-            max_packet_size: value.MaximumPacketSize as usize,
-            interval: value.Interval,
-        })
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -350,20 +302,5 @@ mod tests {
         assert!(PipeId::Out1.is_out());
         assert!(PipeId::Out2.is_out());
         assert!(PipeId::Out3.is_out());
-    }
-
-    #[test]
-    fn pipe_info_try_from() {
-        let info = ffi::FT_PIPE_INFORMATION {
-            PipeType: ffi::FT_PIPE_TYPE::FTPipeTypeControl,
-            PipeId: 0x82,
-            MaximumPacketSize: 64,
-            Interval: 0,
-        };
-        let info = PipeInfo::try_from(info).unwrap();
-        assert_eq!(info.pipe_type(), PipeType::Control);
-        assert_eq!(info.id(), PipeId::In0);
-        assert_eq!(info.max_packet_size(), 64);
-        assert_eq!(info.interval(), 0);
     }
 }

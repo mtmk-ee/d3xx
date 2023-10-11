@@ -1,10 +1,28 @@
+//! USB descriptor types.
+//!
+//! Descriptor types are used to describe the capabilities of a USB device.
+//! The D3XX API provides access to the following descriptors:
+//!
+//! 1. A [device descriptor](crate::descriptor::DeviceDescriptor)
+//! 2. A [configuration descriptor](crate::descriptor::ConfigurationDescriptor)
+//! 3. One or more [interface descriptors](crate::descriptor::InterfaceDescriptor)
+//! 4. One or more [pipe (endpoint) descriptors](crate::descriptor::PipeInfo)
+//!
+//! Descriptors (1), (2), and (3) are returned by [`Device::device_descriptor`](crate::Device),
+//! [`Device::configuration_descriptor`](crate::Device), and [`Device::interface_descriptor`](crate::Device),
+//! respectively. Descriptor (4) maybe obtained using [`Pipe::descriptor`](crate::Pipe) on a pipe
+//! obtained from a [`Device`](crate::Device).
+//!
+//! # Resources
+//! - <https://www.keil.com/pack/doc/mw/USB/html/_u_s_b__descriptors.html>
+
 use std::{
     ffi::{c_uchar, OsString},
     os::windows::prelude::OsStringExt,
     ptr::addr_of_mut,
 };
 
-use crate::{ffi, try_d3xx, Result};
+use crate::{ffi, try_d3xx, D3xxError, PipeId, PipeType, Result};
 
 /// A USB device descriptor.
 pub struct DeviceDescriptor {
@@ -211,6 +229,54 @@ impl UsbVersion {
     }
 }
 
+/// Information about a pipe on a device.
+///
+/// This is returned by [`Device::pipe_info`].
+///
+/// See for more information:
+/// <https://www.keil.com/pack/doc/mw/USB/html/_u_s_b__endpoint__descriptor.html>
+pub struct PipeInfo {
+    pipe_type: PipeType,
+    pipe: PipeId,
+    max_packet_size: usize,
+    interval: u8,
+}
+
+impl PipeInfo {
+    pub(crate) fn new(info: ffi::FT_PIPE_INFORMATION) -> Result<Self> {
+        Ok(Self {
+            pipe_type: PipeType::try_from(info.PipeType).or(Err(D3xxError::OtherError))?,
+            pipe: PipeId::try_from(info.PipeId).or(Err(D3xxError::OtherError))?,
+            max_packet_size: info.MaximumPacketSize as usize,
+            interval: info.Interval,
+        })
+    }
+
+    /// The type of pipe.
+    #[must_use]
+    pub fn pipe_type(&self) -> PipeType {
+        self.pipe_type
+    }
+
+    /// The pipe ID.
+    #[must_use]
+    pub fn id(&self) -> PipeId {
+        self.pipe
+    }
+
+    /// The maximum packet size in bytes.
+    #[must_use]
+    pub fn max_packet_size(&self) -> usize {
+        self.max_packet_size
+    }
+
+    /// The polling interval for data transfers.
+    #[must_use]
+    pub fn interval(&self) -> u8 {
+        self.interval
+    }
+}
+
 /// Class code triple for a device or interface descriptor.
 ///
 /// Contains the class, subclass, and protocol codes.
@@ -255,4 +321,24 @@ fn descriptor_string(handle: ffi::FT_HANDLE, index: c_uchar) -> Result<String> {
     Ok(OsString::from_wide(&descriptor.szString)
         .to_string_lossy()
         .into_owned())
+}
+
+#[cfg(test)]
+mod test {
+    use crate::{descriptor::PipeInfo, ffi, PipeId, PipeType};
+
+    #[test]
+    fn pipe_info_try_from() {
+        let info = ffi::FT_PIPE_INFORMATION {
+            PipeType: ffi::FT_PIPE_TYPE::FTPipeTypeControl,
+            PipeId: 0x82,
+            MaximumPacketSize: 64,
+            Interval: 0,
+        };
+        let info = PipeInfo::new(info).unwrap();
+        assert_eq!(info.pipe_type(), PipeType::Control);
+        assert_eq!(info.id(), PipeId::In0);
+        assert_eq!(info.max_packet_size(), 64);
+        assert_eq!(info.interval(), 0);
+    }
 }
