@@ -235,7 +235,7 @@ impl UsbVersion {
 
 /// Information about a pipe on a device.
 ///
-/// This is returned by [`Pipe::descriptor`](crate::Pipe::descriptor).
+/// This is returned by [`Pipe::descriptor`](crate::PipeIo::descriptor).
 ///
 /// See for more information:
 /// <https://www.keil.com/pack/doc/mw/USB/html/_u_s_b__endpoint__descriptor.html>
