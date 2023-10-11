@@ -345,4 +345,28 @@ mod test {
         assert_eq!(info.max_packet_size(), 64);
         assert_eq!(info.interval(), 0);
     }
+
+    #[test]
+    fn class_code() {
+        let codes = super::ClassCodes::new(0x00, 0x00, 0x00);
+        assert_eq!(codes.class(), 0x00);
+        assert_eq!(codes.subclass(), 0x00);
+        assert_eq!(codes.protocol(), 0x00);
+
+        let codes = super::ClassCodes::new(0x01, 0x02, 0x03);
+        assert_eq!(codes.class(), 0x01);
+        assert_eq!(codes.subclass(), 0x02);
+        assert_eq!(codes.protocol(), 0x03);
+    }
+
+    #[test]
+    fn usb_version() {
+        let version = super::UsbVersion(0x0200);
+        assert_eq!(version.major(), 2);
+        assert_eq!(version.minor(), 0);
+
+        let version = super::UsbVersion(0x0210);
+        assert_eq!(version.major(), 2);
+        assert_eq!(version.minor(), 16);
+    }
 }

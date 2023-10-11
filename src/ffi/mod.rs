@@ -20,7 +20,6 @@ static mut GLOBAL_LOCK: Mutex<()> = Mutex::new(()); // FIXME: is a reentrant mut
 /// For example, listing devices must be done with the lock held since the
 /// operation consists of a write followed by a read of the driver's device table,
 /// which may by invalidated at any point by another thread.
-
 #[allow(clippy::missing_panics_doc)]
 pub fn with_global_lock<F, R>(f: F) -> R
 where
@@ -49,16 +48,14 @@ mod tests {
         assert!(unsafe { GLOBAL_LOCK.try_lock() }.is_err());
     }
 
-    // #[test]
-    // fn test_global_lock_panic() {
-    //     let _guard = unsafe { GLOBAL_LOCK.lock().unwrap() };
-    //     assert!(unsafe { GLOBAL_LOCK.try_lock() }.is_err());
-    //     let result = std::panic::catch_unwind(|| {
-    //         with_global_lock(|| {
-    //             panic!("test panic");
-    //         });
-    //     });
-    //     assert!(result.is_err());
-    //     assert!(unsafe { GLOBAL_LOCK.try_lock().is_ok() });
-    // }
+    #[test]
+    fn test_global_lock_unpoisoning() {
+        let result = std::panic::catch_unwind(|| {
+            with_global_lock(|| {
+                panic!("test panic");
+            });
+        });
+        assert!(result.is_err());
+        assert!(unsafe { GLOBAL_LOCK.try_lock().is_ok() });
+    }
 }
