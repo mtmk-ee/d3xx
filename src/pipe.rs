@@ -7,12 +7,11 @@ use std::{
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::{
-    descriptor::PipeInfo, ffi, overlapped::Overlapped, try_d3xx, D3xxError, Device, Result,
+    descriptor::PipeInfo, ffi, overlapped::Overlapped, try_d3xx, util::PhantomLifetime, D3xxError,
+    Device, Result,
 };
 
-type PhantomLifetime<'a> = PhantomData<&'a ()>;
-
-/// A read/write pipe on a device.
+/// Provides read/write access to an endpoint on the device.
 ///
 /// This struct implements [`Read`] and [`Write`], so it can be used with
 /// the standard library's I/O functions.
@@ -32,14 +31,29 @@ type PhantomLifetime<'a> = PhantomData<&'a ()>;
 ///    .write(&buf)
 ///    .unwrap();
 /// ```
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PipeIo<'a> {
+    /// Handle to the device.
+    ///
+    /// Rust's type system ensures through the lifetime parameter that this handle
+    /// cannot outlive the `Device` instance it belongs to.
     handle: ffi::FT_HANDLE,
+    /// The pipe ID this instance is associated with.
     id: Pipe,
+    /// Lifetime marker, required since `PipeIo` does not contain any references
+    /// with lifetime `'a`
     _lifetime_constraint: PhantomLifetime<'a>,
 }
 
 impl<'a> PipeIo<'a> {
-    pub(crate) fn new(device: &'a Device, id: Pipe) -> Self {
+    /// Create a new `PipeIo` instance using the given device and pipe ID.
+    ///
+    /// The lifetime of the `PipeIo` instance is tied to the lifetime of the `Device` instance;
+    /// the `PipeIo` instance cannot outlive the `Device` instance.
+    ///
+    /// For improved ergonomics it is recommended to use [`Device::pipe`] instead of this method.
+    #[must_use]
+    pub fn new(device: &'a Device, id: Pipe) -> Self {
         Self {
             handle: device.handle(),
             id,
@@ -69,6 +83,9 @@ impl<'a> PipeIo<'a> {
     ///
     /// If `size` is `None` then streaming is disabled. Otherwise,
     /// the pipe will be configured for streaming with the given size.
+    ///
+    /// Stream pipes are general-purpose pipes supporting interrupt, bulk,
+    /// and isochronous transfers.
     pub fn set_stream_size(&self, size: Option<usize>) -> Result<()> {
         match size {
             Some(size) => {
@@ -95,7 +112,12 @@ impl<'a> PipeIo<'a> {
         }
     }
 
-    /// Aborts all pending transfers
+    /// Aborts all pending transfers.
+    ///
+    /// There is no guarantee that the device will not send/receive previously-transmitted data
+    /// after this method is called.
+    ///
+    /// It is recommended to call this method
     pub fn abort(&self) -> Result<()> {
         try_d3xx!(unsafe { ffi::FT_AbortPipe(self.handle, u8::from(self.id)) })
     }
@@ -181,23 +203,11 @@ impl<'a> Read for PipeIo<'a> {
     }
 }
 
-/// Identifies a unique endpoint on a device.
+/// Identifies a unique read/write endpoint on a device.
 ///
-/// An endpoint has up to two corresponding pipes: one for input and one for output.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, TryFromPrimitive, IntoPrimitive)]
-#[repr(u8)]
-pub enum Endpoint {
-    /// Endpoint 0.
-    Endpoint0,
-    /// Endpoint 1.
-    Endpoint1,
-    /// Endpoint 2.
-    Endpoint2,
-    /// Endpoint 3.
-    Endpoint3,
-}
-
-/// Identifies a unique read/write pipe on a device.
+/// D3XX devices have 4 input and 4 output endpoints. The direction of the endpoint is
+/// relative to the host, rather than the device. In other words, an input endpoint is used
+/// to read data from the device, and an output endpoint is used to write data to the device.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, TryFromPrimitive, IntoPrimitive)]
 #[repr(u8)]
 pub enum Pipe {
@@ -233,17 +243,6 @@ impl Pipe {
     pub fn is_out(self) -> bool {
         (self as u8) & 0x80 == 0
     }
-
-    /// Get the endpoint corresponding to this pipe.
-    #[must_use]
-    pub fn endpoint(self) -> Endpoint {
-        match self {
-            Self::In0 | Self::Out0 => Endpoint::Endpoint0,
-            Self::In1 | Self::Out1 => Endpoint::Endpoint1,
-            Self::In2 | Self::Out2 => Endpoint::Endpoint2,
-            Self::In3 | Self::Out3 => Endpoint::Endpoint3,
-        }
-    }
 }
 
 /// The type of a pipe.
@@ -273,15 +272,13 @@ pub enum PipeType {
     Interrupt = 3,
 }
 
-impl TryFrom<ffi::FT_PIPE_TYPE> for PipeType {
-    type Error = ();
-
-    fn try_from(value: ffi::FT_PIPE_TYPE) -> Result<Self, Self::Error> {
+impl From<ffi::FT_PIPE_TYPE> for PipeType {
+    fn from(value: ffi::FT_PIPE_TYPE) -> Self {
         match value {
-            ffi::FT_PIPE_TYPE::FTPipeTypeControl => Ok(Self::Control),
-            ffi::FT_PIPE_TYPE::FTPipeTypeIsochronous => Ok(Self::Isochronous),
-            ffi::FT_PIPE_TYPE::FTPipeTypeBulk => Ok(Self::Bulk),
-            ffi::FT_PIPE_TYPE::FTPipeTypeInterrupt => Ok(Self::Interrupt),
+            ffi::FT_PIPE_TYPE::FTPipeTypeControl => Self::Control,
+            ffi::FT_PIPE_TYPE::FTPipeTypeIsochronous => Self::Isochronous,
+            ffi::FT_PIPE_TYPE::FTPipeTypeBulk => Self::Bulk,
+            ffi::FT_PIPE_TYPE::FTPipeTypeInterrupt => Self::Interrupt,
         }
     }
 }
