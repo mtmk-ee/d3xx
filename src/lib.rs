@@ -51,7 +51,34 @@
 //!
 //! For example, a keyboard or mouse would use interrupt transfers, while a web camera would use isochronous transfers.
 //!
+//! # D3XX Guarantees
 //!
+//! The D3XX API does not provide many guarantees about the behavior of the driver. For example, there are
+//! no guarantees about what happens when a device is unplugged during a transfer, or whether any functions
+//! are thread-safe. Because many aspects of the D3XX API are not explicitly defined or documented, this crate
+//! intentionally puts in place additional restrictions and assumptions to ensure it is safe to use.
+//! The two main assumptions with the greatest consequence on the design of this crate are:
+//!
+//! 1. The driver is not thread-safe nor reentrant.
+//! 2. Any error can occur at any time for any reason.
+//!
+//! Because of the lack of a clear standard, it is *not recommended* to use this crate in safety-critical applications.
+//! Any use of this crate in such applications is at your own risk.
+//!
+//! ## Error Handling
+//!
+//! The documentation on most functions in this crate returning a `Result<T, D3xxError>` does not include an
+//! explanation about the error conditions. This is because in most cases the D3XX documentation
+//! does not provide any information about what errors can occur and under what circumstances.
+//! Because there is no specification for errors, it is not wise to attempt to handle specific
+//! errors in a systematic manner, as the error conditions may change in future versions of the
+//! D3XX API. Instead, it is recommended to use a catch-all approach in most cases.
+//!
+//!
+//! # Further Reading
+//!
+//! It is recommended to read the [D3XX Programmers Guide](https://ftdichip.com/wp-content/uploads/2020/07/AN_379-D3xx-Programmers-Guide-1.pdf)
+//! for more information about the capabilities provided by the D3XX API.
 //!
 //! # Simple Example
 //!
@@ -78,21 +105,6 @@
 //!     .write(&buf)
 //!     .expect("failed to write to pipe");
 //! ```
-//!
-//! # Error Handling
-//!
-//! The documentation on most functions returning a `Result<T, D3xxError>` does not include an
-//! explanation about the error conditions. This is because in most cases the D3XX documentation
-//! does not provide any information about what errors can occur and under what circumstances.
-//!
-//! Because of the lack of a clear specification it is not wise to attempt to handle specific
-//! errors in a programmatic manner, as the error conditions may change in future versions of the
-//! D3XX API. Instead, it is recommended to use a catch-all approach in most cases.
-//!
-//! # Further Reading
-//!
-//! It is recommended to read the [D3XX Programmers Guide](https://ftdichip.com/wp-content/uploads/2020/07/AN_379-D3xx-Programmers-Guide-1.pdf)
-//! for more information about the capabilities provided by the D3XX API.
 
 #![warn(clippy::all, clippy::pedantic, clippy::cargo, missing_docs)]
 // Allow missing error documentation since the D3XX documentation is vague about error conditions.
@@ -110,15 +122,18 @@ mod overlapped;
 mod pipe;
 mod prelude;
 mod scan;
+pub(crate) mod util;
 
 pub use device::Device;
 pub(crate) use error::try_d3xx;
 pub use error::{D3xxError, Result};
 pub use gpio::{Direction, Gpio, GpioPin, Level, PullMode};
-pub use pipe::{Endpoint, Pipe, PipeIo, PipeType};
+pub use pipe::{Pipe, PipeIo, PipeType};
 pub use scan::{list_devices, DeviceInfo, DeviceType};
 
 /// Get the version of the D3XX library.
+///
+/// This is *not* the driver version.
 pub fn library_version() -> Result<Version> {
     let mut version: u32 = 0;
     try_d3xx!(unsafe { ffi::FT_GetLibraryVersion(&mut version) })?;
