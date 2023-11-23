@@ -249,7 +249,7 @@ pub struct PipeInfo {
 impl PipeInfo {
     pub(crate) fn new(info: ffi::FT_PIPE_INFORMATION) -> Result<Self> {
         Ok(Self {
-            pipe_type: PipeType::try_from(info.PipeType).or(Err(D3xxError::OtherError))?,
+            pipe_type: PipeType::from(info.PipeType),
             pipe: Pipe::try_from(info.PipeId).or(Err(D3xxError::OtherError))?,
             max_packet_size: info.MaximumPacketSize as usize,
             interval: info.Interval,

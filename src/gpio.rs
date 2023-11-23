@@ -9,9 +9,8 @@ use std::marker::PhantomData;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::ffi;
+use crate::util::PhantomLifetime;
 use crate::{try_d3xx, Device, Result};
-
-type PhantomLifetime<'a> = PhantomData<&'a ()>;
 
 /// GPIO access.
 ///
