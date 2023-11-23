@@ -25,9 +25,15 @@ use crate::{
 ///
 /// # Thread Safety
 ///
-/// FTDI provides no information regarding the thread-safety of the D3XX driver. Out of an abundance of
-/// caution, the `Device` struct is intentionally `!Sync` (although it is `Send`), meaning that it cannot
-/// be shared across threads without a synchronization primitive such as a mutex.
+/// The `Device` struct offers unsynchronized interior mutability, meaning that it is not protected
+/// from shared write operations, but can be moved between threads as long as it is not used
+/// concurrently. In otherwords, `Device: Send + !Sync`. This is done out of an abundance of caution,
+/// as FTDI provides no information regarding the thread-safety of the D3XX driver.
+///
+/// For multi-threaded applications, it is recommended to use a synchronization primitive such as a
+/// [`Mutex`](std::sync::Mutex) to ensure that the device is not used concurrently. A
+/// [`RwLock<Device>`](std::sync::RwLock) cannot be shared between threads because of the bounds on
+/// its [`Sync`] implementation.
 ///
 /// # Example
 ///
@@ -262,7 +268,19 @@ impl Device {
     ///
     /// The callback is invoked by the driver once a notification is received indicating
     /// data availability on a notification-enabled pipe. Pipes should not be read
-    /// outside of the callback when notifications are enabled.
+    /// outside of the callback when notifications are enabled. Additionally the callback
+    /// function should avoid blocking operations, as this may prevent the driver from
+    /// processing other events.
+    ///
+    /// See the [`notification`](crate::notification) module for more information and
+    /// an example.
+    ///
+    /// # Safety
+    ///
+    /// This method is marked `unsafe` because extra care must be taken when using the
+    /// callback in order to avoid undefined behavior. It is critical that the callback
+    /// does not panic, as the callback is invoked through the driver and unwinding
+    /// across the FFI boundary is generally not a good idea.
     ///
     /// # Memory Leaks
     ///
@@ -272,38 +290,16 @@ impl Device {
     /// Until this is confirmed, it is recommended to only set the callback a small number of times,
     /// and with a `T` that is small enough to not cause memory issues.
     ///
-    /// # Example
-    ///
-    /// ```no_run
-    /// use d3xx::Device;
-    /// use d3xx::notification::{Notification, NotificationData};
-    ///
-    /// fn callback(notification: Notification<String>) {
-    ///     match notification.data() {
-    ///         NotificationData::Data { endpoint, size } => {
-    ///             println!("Received {size} bytes on endpoint {endpoint:?}");
-    ///
-    ///         }
-    ///         NotificationData::Gpio { gpio0, gpio1 } => {
-    ///             println!("GPIO0: {gpio0}, GPIO1: {gpio1}");
-    ///         }
-    ///     }
-    ///     // context is set when the callback is set
-    ///     println!("Context: {:?}", notification.context());
-    /// }
-    ///
-    /// let device = Device::open("ABC123").unwrap();
-    ///
-    /// // Set the notification callback to print the notification data.
-    /// let context = Some("Hello!".to_owned());
-    /// device.set_notification_callback(callback, context).unwrap();
-    /// ```
-    ///
     /// # References
     /// See page 42 for more information:
     /// <https://ftdichip.com/wp-content/uploads/2020/07/AN_379-D3xx-Programmers-Guide-1.pdf>
-    pub fn set_notification_callback<F, T>(&self, callback: F, context: Option<T>) -> Result<()>
+    pub unsafe fn set_notification_callback<F, T>(
+        &self,
+        callback: F,
+        context: Option<T>,
+    ) -> Result<()>
     where
+        T: Sync,
         F: Fn(Notification<T>) + 'static,
     {
         set_notification_callback(self.handle, callback, context)
@@ -330,3 +326,9 @@ impl Drop for Device {
         }
     }
 }
+
+/// While a device is [`!Sync`](Sync), it is perfectly fine for it to be [`Send`]
+/// because the device provides *unsynchronized* interior mutability, meaning that
+/// the device is not protected by shared writes, but can be moved between threads
+/// as long as it is not used concurrently.
+unsafe impl Send for Device {}
