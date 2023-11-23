@@ -3,6 +3,11 @@
 //! This module contains the raw FTDI D3XX driver bindings. Most users will not need to use
 //! this module directly, and should instead use the higher-level abstractions provided by
 //! the rest of the crate.
+//!
+//! If using the bindings directly in conjunction with the higher-level abstractions, it is
+//! important to ensure that the global lock is held when necessary. See [`with_global_lock`]
+//! for more information. Care should also be taken to ensure that the higher-level abstractions
+//! do not conflict with the use of the raw bindings.
 pub(crate) mod util;
 
 use std::{panic::catch_unwind, sync::Mutex};
@@ -20,6 +25,10 @@ static mut GLOBAL_LOCK: Mutex<()> = Mutex::new(()); // FIXME: is a reentrant mut
 /// For example, listing devices must be done with the lock held since the
 /// operation consists of a write followed by a read of the driver's device table,
 /// which may by invalidated at any point by another thread.
+///
+/// # Panics
+///
+/// This function will panic if the closure panics while the lock is held.
 #[allow(clippy::missing_panics_doc)]
 pub fn with_global_lock<F, R>(f: F) -> R
 where

@@ -1,3 +1,7 @@
+//! Miscellaneous utility functions.
+//!
+//! This module contains functions which are used internally by the crate, but are not
+//! part of the public API. These functions may be changed or removed at any time.
 use std::ffi::c_ulong;
 
 use crate::{try_d3xx, D3xxError};
@@ -6,7 +10,7 @@ use super::{FT_ReadPipe, FT_WritePipe, Result, FT_HANDLE, _OVERLAPPED};
 
 /// Write to a pipe synchronously.
 ///
-/// If the operation fails it is the responsibility of the user to
+/// If the operation fails it is the responsibility of the caller to
 /// abort any ongoing transfers for the pipe.
 ///
 /// On success the number of bytes written is returned.
