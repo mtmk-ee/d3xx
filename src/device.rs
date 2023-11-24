@@ -277,10 +277,9 @@ impl Device {
     ///
     /// # Safety
     ///
-    /// This method is marked `unsafe` because extra care must be taken when using the
-    /// callback in order to avoid undefined behavior. It is critical that the callback
-    /// does not panic, as the callback is invoked through the driver and unwinding
-    /// across the FFI boundary is generally not a good idea.
+    /// It is critical that the callback does not panic, as the callback is invoked through
+    /// the driver and unwinding across the FFI boundary is not protected. This issue
+    /// will be fixed in the future ([issue](https://github.com/mtmk-ee/d3xx/issues/4)).
     ///
     /// # Memory Leaks
     ///
@@ -293,11 +292,7 @@ impl Device {
     /// # References
     /// See page 42 for more information:
     /// <https://ftdichip.com/wp-content/uploads/2020/07/AN_379-D3xx-Programmers-Guide-1.pdf>
-    pub unsafe fn set_notification_callback<F, T>(
-        &self,
-        callback: F,
-        context: Option<T>,
-    ) -> Result<()>
+    pub fn set_notification_callback<F, T>(&self, callback: F, context: Option<T>) -> Result<()>
     where
         T: Sync,
         F: Fn(Notification<T>) + 'static,
