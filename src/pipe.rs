@@ -153,7 +153,7 @@ impl<'a> PipeIo<'a> {
     ///
     /// # Panics
     ///
-    /// Panics if `buf.len()` exceeds [`std::ffi::c_ulong::MAX`]
+    /// Panics if `buf.len()` exceeds `std::ffi::c_ulong::MAX`
     pub async fn read_async(&self, buf: &mut [u8]) -> Result<usize> {
         let mut overlapped = Overlapped::new(self.handle)?;
         self.maybe_abort(ffi::util::read_pipe_async(
@@ -171,7 +171,7 @@ impl<'a> PipeIo<'a> {
     ///
     /// # Panics
     ///
-    /// Panics if `buf.len()` exceeds [`std::ffi::c_ulong::MAX`]
+    /// Panics if `buf.len()` exceeds `std::ffi::c_ulong::MAX`
     pub async fn write_async(&self, buf: &[u8]) -> Result<usize> {
         let mut overlapped = Overlapped::new(self.handle)?;
         self.maybe_abort(ffi::util::write_pipe_async(
