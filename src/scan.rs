@@ -7,12 +7,18 @@ use crate::{
 
 /// Information about a connected `FT60x` device.
 ///
-/// This structure is returned by [`list_devices`].
+/// This structure is returned by [`list_devices`]. It contains information about the device
+/// including identification, description, and device type. The device may be opened using
+/// [`open`](DeviceInfo::open).
+///
+/// See [`list_devices`] for an example.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DeviceInfo {
     flags: u32,
     device_type: DeviceType,
+    /// Vendor ID
     vid: u16,
+    /// Product ID
     pid: u16,
     location_id: u32,
     serial_number: String,
@@ -46,7 +52,10 @@ impl DeviceInfo {
         self.flags & ffi::FT_FLAGS::FT_FLAGS_SUPERSPEED as u32 != 0
     }
 
-    /// Get the device's flags.
+    /// Get the flags set by the device.
+    ///
+    /// The functions `is_open`, `is_hispeed`, and `is_superspeed` are
+    /// preferred over checking the flags directly.
     #[must_use]
     pub fn flags(&self) -> u32 {
         self.flags
@@ -126,10 +135,8 @@ impl From<&ffi::FT_DEVICE_LIST_INFO_NODE> for DeviceInfo {
 }
 
 /// Represents the type of `FT60x` device.
-
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum DeviceType {
-    /// Unknown device type.
     Unknown,
     /// `FT600` device.
     FT600,
@@ -148,22 +155,54 @@ impl From<u32> for DeviceType {
 }
 
 /// List all connected `FT60x` devices.
+///
+/// This function calls the D3XX API to build a device table and returns a list of [`DeviceInfo`]
+/// instances for each connected device. Devices which operate only via the D2XX driver are not
+/// included in the list.
+///
+/// This function acquires the [global lock](crate::ffi::with_global_lock) to avoid concurrent
+/// access to the driver's internal device table.
+///
+/// # Example
+///
+/// ```no_run
+/// use d3xx::list_devices;
+///
+/// fn main() -> d3xx::Result<()> {
+///     let devices = list_devices()?;
+///     for (i, device) in devices.into_iter().enumerate() {
+///         println!("Device {i}");
+///         println!("  Serial number: {}", device.serial_number());
+///         println!("  Description: {}", device.description());
+///         println!("  VID: 0x{:04x}", device.vid());
+///         println!("  PID: 0x{:04x}", device.pid());
+///         println!("  Flags: {}", device.flags());
+///         println!("  Type: {:?}", device.device_type());
+///         println!("  USB3?: {}", device.is_superspeed());
+///     }
+///     Ok(())
+/// }
 pub fn list_devices() -> Result<Vec<DeviceInfo>> {
-    // global lock needed to prevent concurrent access to the driver's internal device table
     let devices = with_global_lock(|| -> Result<_> {
-        let n_devices = create_device_info_list()?;
-        // output parameter is guaranteed to be exactly equal to `n_devices`
-        let mut figuratively_garbage: c_uint = 0;
-        let mut devices: Vec<ffi::FT_DEVICE_LIST_INFO_NODE> = Vec::with_capacity(n_devices);
+        // Theoretically we can have a mismatch between `buf_capacity` and the actual
+        // number of devices expected by `FT_GetDeviceInfoList`. It is very unlikely
+        // because the only way it can happen is if both of the following happen:
+        //
+        // 1. A device is connected or disconnected
+        // 2. Another call to `FT_CreateDeviceInfoList` occurs right before `FT_GetDeviceInfoList`
+        //
+        // This should not happen in practice if the practice of acquiring the global lock
+        // is adhered to.
+        let buf_capacity = create_device_info_list()?;
+        let mut table_len: c_uint = 0;
+        let mut devices: Vec<ffi::FT_DEVICE_LIST_INFO_NODE> = Vec::with_capacity(buf_capacity);
         try_d3xx!(unsafe {
-            ffi::FT_GetDeviceInfoList(
-                devices.as_mut_ptr(),
-                std::ptr::addr_of_mut!(figuratively_garbage),
-            )
+            ffi::FT_GetDeviceInfoList(devices.as_mut_ptr(), std::ptr::addr_of_mut!(table_len))
         })?;
-        // SAFETY: the number of devices is known to be correct
-        // and the device buffer is fully populated.
-        unsafe { devices.set_len(n_devices) };
+        let safe_len = std::cmp::min(buf_capacity, table_len as usize);
+        // SAFETY: the number of devices is less than or equal to the capacity
+        // the vector was created with.
+        unsafe { devices.set_len(safe_len) };
 
         Ok(devices)
     })?;
