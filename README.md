@@ -1,27 +1,106 @@
-# d3xx
+Future Technology Devices International (FTDI) produces the FT60X series of chips (e.g. FT601),
+which act as Super Speed USB 3.0 to FIFO bridges. FTDI provides a proprietary driver for these chips,
+called D3XX, which exposes a low-level API for interacting with the devices through its DLL/shared library.
 
-This crate provides a safe Rust wrapper around FTDI's D3XX driver API.
+This crate provides a safe, idiomatic Rust wrapper around FTDI's D3XX driver API.
 
-**Disclaimer:** this crate is unofficial, and is not affiliated with FTDI in any way.
+# Disclaimer
 
-**Note:** this crate is still in early development and is not yet ready for production use.
+This crate is unofficial and is not affiliated with FTDI in any way.
+
+The crate is still in early development and is not yet ready for production use.
 Feedback and contributions are welcome!
 
-The D3XX driver provides a low-level interface for interacting with FT60x devices.
-It is intended to be used in conjunction with the FT60x "Super Speed" series of ICs, which provide
-a USB 3.0 interface for transferring data at high speeds.
+# What This Crate Does
 
-The primary interface for interacting with devices is the [`Device`] struct. It provides methods
-for reading, writing, configuration, and more. See the [`Device`] documentation for more details.
-
-# Features
-
-- Searching for connected devices
-- Reading and writing to pipes
-- Asynchronous pipe transfers
+This crate provides near-complete functionality of the D3XX API:
+- Device enumeration
+- Reading device configurations
+- Pipe I/O
 - GPIO control
-- Reading device attributes and configuration
-- Driver notification callbacks
+- Notifications
+- Overlapped (Asynchronous) I/O
+
+This crate does not wrap functionality for configuring the device. If it is deemed necessary,
+the unsafe FFI functions may be called directly. However, it is recommended to use the
+[FT60X Chip Configuration Programmer](https://ftdichip.com/utilities/) instead for this purpose.
+
+# Requirements
+
+This crate is available for Linux, Windows, and macOS. Although the crate may be build without
+it, the [D3XX driver](https://ftdichip.com/drivers/d3xx-drivers/) must be installed for the
+target platform in order to communicate with devices.
+
+Building this crate requires [Clang](https://releases.llvm.org/download.html) to be installed.
+
+# Background
+
+## Brief Refresher on USB 3.0
+
+### Terminology
+USB peripherals contain a series of numbered endpoints, which are essentially physical data buffers. Each endpoint may contain
+one or two buffers, corresponding to the direction of data flow (IN or OUT). D3XX devices have 8 endpoints, 4 each for IN and OUT transfers.
+The software representation of an endpoint is known as a "pipe" and is unidirectional.
+
+Endpoints are collected into "interfaces", which are logical groupings of endpoints that serve a common purpose.
+These interfaces are then collected into "configurations", which are collections of interfaces that represent
+a complete set of functionality for the device. A device may have multiple configurations, but only one may be active
+at a time.
+
+### Transfers
+
+Data is transferred to and from the device in packets called "transactions". There are four types of transfers
+that can be performed:
+
+- Control transfers: mainly used for configuration and identification by the host.
+- Bulk transfers: used for large data transfers where correctness is prioritized over throughput.
+- Isochronous transfers: used for streaming data where throughput is prioritized over correctness.
+- Interrupt transfers: used for small data transfers that require low latency.
+
+For example, a keyboard or mouse would use interrupt transfers, while a web camera would use isochronous transfers.
+
+# D3XX Constraints
+
+The D3XX API does not provide many guarantees about the behavior of the driver. For example, there are
+no guarantees about what happens when a device is unplugged during a transfer, or whether any functions
+are thread-safe. Because many aspects of the D3XX API are not explicitly defined or documented, this crate
+intentionally puts in place additional restrictions and assumptions to ensure it is safe to use.
+The two main assumptions with the greatest consequence on the design of this crate are:
+
+1. The driver is not thread-safe nor reentrant.
+2. Any error can occur at any time for any reason.
+
+Because of the lack of a clear standard, it is *not recommended* to use this crate in safety-critical applications.
+Any use of this crate in such applications is at your own risk.
+
+## Error Handling
+
+The documentation on most functions in this crate returning a `Result<T, D3xxError>` does not include an
+explanation about the error conditions. This is because in most cases the D3XX documentation
+does not provide any information about what errors can occur and under what circumstances.
+Because there is no specification for errors, it is not wise to attempt to handle specific
+errors in a systematic manner, as the error conditions may change in future versions of the
+D3XX API. Instead, it is recommended to use a catch-all approach in most cases.
+
+## Global Lock
+
+One of the consequences of the assumption regarding thread-safety is that some operations
+must be performed while holding a lock on the driver. For example, listing devices must be done
+with the lock held since the operation consists of a write followed by a read of the driver's
+device table, which may by invalidated at any point by another thread.
+
+The operations which acquire the lock do so transparently by calling
+`with_global_lock`. This function is also available for use
+by the user if access to the bindings are needed. Care should be taken to avoid deadlocks when
+using this function.
+
+# Further Reading
+
+It is recommended to read the [D3XX Programmers Guide](https://ftdichip.com/wp-content/uploads/2020/07/AN_379-D3xx-Programmers-Guide-1.pdf)
+for more information about the capabilities provided by the D3XX API. Some information missing from the
+D3XX Programmers Guide can be found in the
+[D3XX .NET Programmers Guide](https://ftdichip.com/wp-content/uploads/2020/08/AN_407-D3xx-.NET-Programmers-Guide.pdf)
+instead.
 
 # Simple Example
 
