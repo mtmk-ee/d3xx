@@ -1,5 +1,26 @@
+//! Types and functions for reading chip configurations.
+//!
+//! Chip configurations can be set using the [FT60X Chip Configuration Programmer](https://ftdichip.com/utilities/).
+//! The configuration of a chip is not one-to-one with the USB configuration descriptor, although
+//! some of the fields are.
+//!
+//! The configuration may be read from a device once it is opened. Writing configuration changes
+//! to the device is not yet supported. The chip configuration contains a large amount of information about
+//! the device, including:
+//!
+//! - Identification
+//! - Power consumption
+//! - Pin drive strengths
+//! - Optional features
+//! - FIFO timing and behavior
+//! - Channel configuration
+//!
+//! # Further Reading
+//!
+//! FTDI provides the [FT60X Configuration Programmer Guide](https://ftdichip.com/wp-content/uploads/2020/07/AN_370-FT60X-Configuration-Programmer-User-Guide.pdf)
+//! which describes the configuration options in detail.
+
 mod data_transfer;
-mod notification;
 mod optional;
 mod pin_drive;
 mod power;
@@ -9,13 +30,15 @@ use std::ptr::addr_of_mut;
 
 use crate::{ffi, try_d3xx, Result};
 pub use data_transfer::*;
-pub use notification::*;
 pub use optional::*;
 pub use pin_drive::*;
 pub use power::*;
 pub use string_descriptor::*;
 
 /// `FT60x` chip configuration.
+///
+/// The configuration may be read from a device once it is opened.
+/// Writing configuration changes to the device is not yet supported.
 pub struct ChipConfiguration {
     vid: u16,
     pid: u16,

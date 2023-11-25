@@ -13,8 +13,11 @@
 //! respectively. Descriptor (4) maybe obtained using [`Pipe::descriptor`](crate::Pipe) on a pipe
 //! obtained from a [`Device`](crate::Device).
 //!
-//! # Resources
+//! Although USB devices may provide more types of descriptors, they are not supported by the D3XX API.
+//!
+//! # Further Reading
 //! - <https://www.keil.com/pack/doc/mw/USB/html/_u_s_b__descriptors.html>
+//! - <https://ftdichip.com/wp-content/uploads/2020/08/TN_113_Simplified-Description-of-USB-Device-Enumeration.pdf>
 
 use std::{
     ffi::{c_uchar, OsString},
@@ -25,7 +28,15 @@ use std::{
 use crate::{ffi, try_d3xx, D3xxError, Pipe, PipeType, Result};
 
 /// A USB device descriptor.
+///
+/// There is one device descriptor provided by a D3XX device.
+/// This descriptor holds very basic information about the device, such as
+/// its identification, USB version, and function.
 pub struct DeviceDescriptor {
+    /// The inner descriptor struct.
+    ///
+    /// Contains the raw data returned by the driver. Additional information
+    /// is provided by the other fields of this struct.
     inner: ffi::FT_DEVICE_DESCRIPTOR,
     serial_number: String,
     manufacturer: String,
@@ -33,9 +44,21 @@ pub struct DeviceDescriptor {
 }
 
 impl DeviceDescriptor {
+    /// Build a new `DeviceDescriptor` instance by reading the device.
+    ///
+    /// The descriptor and corresponding descriptor strings are pulled from
+    /// the device. This operation will fail if the handle is not valid.
+    ///
+    /// # Panics
+    ///
+    /// Panics in debug builds if the descriptor returned by the driver is invalid.
+    /// This is intended for debugging purposes, and the behavior is likely to change
+    /// in the future.
     pub(crate) fn new(handle: ffi::FT_HANDLE) -> Result<Self> {
         let mut inner = ffi::FT_DEVICE_DESCRIPTOR::default();
         try_d3xx!(unsafe { ffi::FT_GetDeviceDescriptor(handle, addr_of_mut!(inner)) })?;
+        // The device descriptor has a particular format, so we can perform a sanity check here
+        // to avoid reading from potentially invalid memory.
         // See pg. 5: https://ftdichip.com/wp-content/uploads/2020/08/TN_113_Simplified-Description-of-USB-Device-Enumeration.pdf
         debug_assert_eq!(inner.bLength, 18);
         debug_assert_eq!(inner.bDescriptorType, 1);
@@ -84,12 +107,16 @@ impl DeviceDescriptor {
     }
 
     /// The maximum size, in bytes, of a packet for an endpoint.
+    ///
+    /// This is typically irrelevant for the user.
     #[must_use]
     pub fn max_packet_size(&self) -> usize {
         usize::from(self.inner.bMaxPacketSize0)
     }
 
-    /// Device class codes
+    /// Returns a struct containing the interface class codes.
+    ///
+    /// The codes are used to indicate the class, subclass, and protocol.
     #[must_use]
     pub fn class_codes(&self) -> ClassCodes {
         ClassCodes::new(
@@ -101,15 +128,36 @@ impl DeviceDescriptor {
 }
 
 /// A USB interface descriptor for a [`Device`](crate::Device).
+///
+/// There is one interface descriptor per interface. This descriptor holds
+/// information about the interface, such as its class codes, and information
+/// about the endpoints used by the interface.
 pub struct InterfaceDescriptor {
+    /// The inner descriptor struct.
+    ///
+    /// Contains the raw data returned by the driver. Additional information
+    /// is provided by the other fields of this struct.
     inner: ffi::FT_INTERFACE_DESCRIPTOR,
     description: String,
 }
 
 impl InterfaceDescriptor {
+    /// Build a new `InterfaceDescriptor` instance by reading the device.
+    ///
+    /// The descriptor and corresponding descriptor strings are pulled from
+    /// the device. This operation will fail if the handle is not valid.
+    ///
+    /// # Panics
+    ///
+    /// Panics in debug builds if the descriptor returned by the driver is invalid.
+    /// This is intended for debugging purposes, and the behavior is likely to change
+    /// in the future.
     pub(crate) fn new(handle: ffi::FT_HANDLE, index: c_uchar) -> Result<Self> {
         let mut inner = ffi::FT_INTERFACE_DESCRIPTOR::default();
         try_d3xx!(unsafe { ffi::FT_GetInterfaceDescriptor(handle, index, addr_of_mut!(inner)) })?;
+        // The device descriptor has a particular format, so we can perform a sanity check here
+        // to avoid reading from potentially invalid memory.
+        //
         // See pg. 8: https://ftdichip.com/wp-content/uploads/2020/08/TN_113_Simplified-Description-of-USB-Device-Enumeration.pdf
         debug_assert_eq!(inner.bLength, 9);
         debug_assert_eq!(inner.bDescriptorType, 4);
@@ -121,12 +169,17 @@ impl InterfaceDescriptor {
     }
 
     /// The interface this descriptor describes.
+    ///
+    /// The interface number is unique per configuration, but may be
+    /// reused across configurations.
     #[must_use]
     pub fn interface_number(&self) -> usize {
         usize::from(self.inner.bInterfaceNumber)
     }
 
-    /// Interface class codes.
+    /// Returns a struct containing the interface class codes.
+    ///
+    /// The codes are used to indicate the class, subclass, and protocol.
     #[must_use]
     pub fn class_codes(&self) -> ClassCodes {
         ClassCodes::new(
@@ -142,7 +195,9 @@ impl InterfaceDescriptor {
         usize::from(self.inner.bNumEndpoints)
     }
 
-    /// The interface number.
+    /// A value used to select an alternate setting for this interface.
+    ///
+    /// The D3XX API does not provide a way to switch to the alternate setting.
     #[must_use]
     pub fn alternate_setting(&self) -> u8 {
         self.inner.bAlternateSetting
@@ -157,15 +212,33 @@ impl InterfaceDescriptor {
 
 /// A USB configuration descriptor for a [`Device`](crate::Device)
 ///
+/// There is one configuration descriptor per configuration. This descriptor holds
+/// information about the configuration, such as its description, power settings,
+/// and its interfaces.
+///
 /// # Resources
 /// - <https://www.keil.com/pack/doc/mw/USB/html/_u_s_b__configuration__descriptor.html>
 /// - Page 7 of <https://ftdichip.com/wp-content/uploads/2020/08/TN_113_Simplified-Description-of-USB-Device-Enumeration.pdf>
 pub struct ConfigurationDescriptor {
+    /// The inner descriptor struct.
+    ///
+    /// Contains the raw data returned by the driver. Additional information
+    /// is provided by the other fields of this struct.
     inner: ffi::FT_CONFIGURATION_DESCRIPTOR,
     description: String,
 }
 
 impl ConfigurationDescriptor {
+    /// Build a new `ConfigurationDescriptor` instance by reading the device.
+    ///
+    /// The descriptor and corresponding descriptor strings are pulled from
+    /// the device. This operation will fail if the handle is not valid.
+    ///
+    /// # Panics
+    ///
+    /// Panics in debug builds if the descriptor returned by the driver is invalid.
+    /// This is intended for debugging purposes, and the behavior is likely to change
+    /// in the future.
     pub(crate) fn new(handle: ffi::FT_HANDLE) -> Result<Self> {
         let mut inner = ffi::FT_CONFIGURATION_DESCRIPTOR::default();
         try_d3xx!(unsafe { ffi::FT_GetConfigurationDescriptor(handle, addr_of_mut!(inner)) })?;
@@ -185,12 +258,14 @@ impl ConfigurationDescriptor {
     }
 
     /// The configuration number.
+    ///
+    /// The D3XX API does not provide a way to switch to a different configuration.
     #[must_use]
     pub fn configuration_value(&self) -> u8 {
         self.inner.bConfigurationValue
     }
 
-    /// The configuration description.
+    /// A human-readable description of the configuration.
     #[must_use]
     pub fn description(&self) -> &str {
         &self.description
@@ -206,17 +281,21 @@ impl ConfigurationDescriptor {
     /// Whether the device is self-powered.
     #[must_use]
     pub fn self_powered(&self) -> bool {
-        self.inner.bmAttributes & 0b0100_0000 != 0
+        self.inner.bmAttributes & CONFIGURATION_ATTRIBUTE_SELF_POWERED != 0
     }
 
     /// Whether the device supports remote wakeup.
     #[must_use]
     pub fn remote_wakeup(&self) -> bool {
-        self.inner.bmAttributes & 0b0010_0000 != 0
+        self.inner.bmAttributes & CONFIGURATION_ATTRIBUTE_REMOTE_WAKEUP != 0
     }
 }
 
-/// USB protocol version.
+// Bit flags for the `bmAttributes` field of a configuration descriptor.
+const CONFIGURATION_ATTRIBUTE_SELF_POWERED: u8 = 0b0100_0000;
+const CONFIGURATION_ATTRIBUTE_REMOTE_WAKEUP: u8 = 0b0010_0000;
+
+/// Indicates the USB protocol version (e.g. USB 3.1)
 pub struct UsbVersion(usize);
 
 impl UsbVersion {
@@ -233,30 +312,38 @@ impl UsbVersion {
     }
 }
 
-/// Information about a pipe on a device.
+/// Information about a pipe.
 ///
-/// This is returned by [`Pipe::descriptor`](crate::PipeIo::descriptor).
+/// Note that this information is very similar to what the USB standard refers to as
+/// an "endpoint descriptor". However, the D3XX API provides a slightly different structure
+/// containing a subset of this data.
+///
+/// This is returned by [`PipeIo::descriptor`](crate::PipeIo).
 ///
 /// See for more information:
 /// <https://www.keil.com/pack/doc/mw/USB/html/_u_s_b__endpoint__descriptor.html>
 pub struct PipeInfo {
-    pipe_type: PipeType,
     pipe: Pipe,
+    pipe_type: PipeType,
     max_packet_size: usize,
     interval: u8,
 }
 
 impl PipeInfo {
+    /// Create a new `PipeInfo` instance from the given [`ffi::FT_PIPE_INFORMATION`] struct.
+    ///
+    /// Although unlikely if `info` has been obtained directly from the driver, this may fail
+    /// if the pipe type or ID is invalid.
     pub(crate) fn new(info: ffi::FT_PIPE_INFORMATION) -> Result<Self> {
         Ok(Self {
-            pipe_type: PipeType::try_from(info.PipeType).or(Err(D3xxError::OtherError))?,
+            pipe_type: PipeType::from(info.PipeType),
             pipe: Pipe::try_from(info.PipeId).or(Err(D3xxError::OtherError))?,
             max_packet_size: info.MaximumPacketSize as usize,
             interval: info.Interval,
         })
     }
 
-    /// The type of pipe.
+    /// The type of transfer used for the pipe.
     #[must_use]
     pub fn pipe_type(&self) -> PipeType {
         self.pipe_type
@@ -269,12 +356,17 @@ impl PipeInfo {
     }
 
     /// The maximum packet size in bytes.
+    ///
+    /// This is typically irrelevant for the user.
     #[must_use]
     pub fn max_packet_size(&self) -> usize {
         self.max_packet_size
     }
 
     /// The polling interval for data transfers.
+    ///
+    /// What this value corresponds to depends on the `pipe_type`.
+    /// See <https://www.keil.com/pack/doc/mw/USB/html/_u_s_b__endpoint__descriptor.html>
     #[must_use]
     pub fn interval(&self) -> u8 {
         self.interval
@@ -291,6 +383,7 @@ pub struct ClassCodes {
 }
 
 impl ClassCodes {
+    /// Create a new `ClassCodes` instance with the given codes.
     fn new(class: u8, subclass: u8, protocol: u8) -> Self {
         Self {
             class,
@@ -319,6 +412,9 @@ impl ClassCodes {
 }
 
 /// Fetch a string descriptor from the device.
+///
+/// It is important that `index` is valid, as unknown behavior may occur from
+/// attempting to read past the end of the descriptor table.
 fn descriptor_string(handle: ffi::FT_HANDLE, index: c_uchar) -> Result<String> {
     let mut descriptor = ffi::FT_STRING_DESCRIPTOR::default();
     try_d3xx!(unsafe { ffi::FT_GetStringDescriptor(handle, index, addr_of_mut!(descriptor)) })?;

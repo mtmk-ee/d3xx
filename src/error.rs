@@ -2,14 +2,33 @@ use std::fmt::Display;
 
 use crate::ffi;
 
-/// A specialized [`Result`] type for D3XX operations.
+/// A specialized [`Result`] type alias for D3XX operations.
+///
+/// See [`D3xxError`] for a list of possible errors, and [`try_d3xx`] for a macro
+/// producing a [`Result`] from D3XX error codes.
 pub type Result<T, E = D3xxError> = std::result::Result<T, E>;
 
-/// Represents an error returned by the D3XX API.
+/// Represents an error returned by the D3XX library.
 ///
-/// Codes 1 through 32 are defined as error by the API.
+/// # Warning About Error Variants
 ///
-/// If necessary, a [`D3xxError`] may be constructed from an error code:
+/// The documentation on most functions in this crate returning a `Result<T, D3xxError>` does not include an
+/// explanation about the error conditions. This is because in most cases the D3XX documentation
+/// does not provide any information about what errors can occur and under what circumstances.
+/// Because there is no specification for errors, it is not wise to attempt to handle specific
+/// errors in a systematic manner, as the error conditions may change in future versions of the
+/// D3XX API. Instead, it is recommended to use a catch-all approach in most cases.
+///
+/// Note also that the error variants are explicitly annotated with `#[non_exhaustive]`. This is
+/// to allow for the possibility of new error variants being added in future versions of the D3XX
+/// API without the need to introduce breaking changes.
+///
+/// # Error Codes
+///
+/// Codes 1 through 32 (inclusive) are defined as an error by the API, while 0 represents success.
+/// All other error codes are treated as [`D3xxError::OtherError`]. The [`From`] implementation for
+/// [`D3xxError`] maps these codes to the corresponding error variant. Note that the `from` method
+/// will panic if the given code is invalid.
 ///
 /// ```
 /// use d3xx::D3xxError;
@@ -18,10 +37,10 @@ pub type Result<T, E = D3xxError> = std::result::Result<T, E>;
 /// assert_eq!(err, D3xxError::InvalidHandle);
 /// ```
 ///
-/// Note that the `from` method will panic if the given code is invalid.
 #[allow(unused, clippy::module_name_repetitions, missing_docs)]
-#[derive(thiserror::Error, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u8)]
+#[non_exhaustive]
+#[derive(thiserror::Error, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum D3xxError {
     InvalidHandle = 1,
     DeviceNotFound,
@@ -61,6 +80,8 @@ pub enum D3xxError {
 
 impl D3xxError {
     /// Get the error code as an integer.
+    ///
+    /// Error codes are defined using values from 1 to 32 (inclusive).
     #[must_use]
     pub fn code(&self) -> u8 {
         *self as u8
@@ -70,6 +91,7 @@ impl D3xxError {
 impl Display for D3xxError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let code = self.code();
+        // VARIANT_NAME (error code CODE)
         write!(f, "{self:?} (error code {code})")
     }
 }
@@ -115,21 +137,40 @@ impl From<ffi::FT_STATUS> for D3xxError {
 }
 
 impl From<D3xxError> for std::io::Error {
+    /// Allows propagation of D3XX errors as a [`std::io::Error`].
+    ///
+    /// This implementation is useful for functions which return [`io::Result<T>`](std::io::Result),
+    /// such as the methods found in [`io::Write`](std::io::Write).
     fn from(value: D3xxError) -> Self {
         Self::new(std::io::ErrorKind::Other, value)
     }
 }
 
+/// A macro for converting D3XX error codes to a [`Result<T, D3xxError>`].
+///
+/// The majority of D3XX functions return an integral status code. This macro
+/// maps the status code to a [`Result<T, D3xxError>`] where `T` is `()`.
+///
+/// # Example
+///
+/// The following example demonstrates how to use the macro. Normally you would
+/// use the macro to wrap a function call, rather than using a constant.
+///
+/// ```ignore
+/// use d3xx::try_d3xx;
+///
+/// try_d3xx!(0).unwrap(); // Ok
+/// try_d3xx!(1).unwrap(); // Error!
+/// ```
+#[macro_export]
 macro_rules! try_d3xx {
     ($expr:expr) => {
         match $expr {
             0 => Ok(()),
-            code => Err(crate::error::D3xxError::from(code)),
+            code => Err($crate::error::D3xxError::from(code)),
         }
     };
 }
-
-pub(crate) use try_d3xx;
 
 #[cfg(test)]
 mod tests {
