@@ -18,6 +18,9 @@ use crate::{ffi, try_d3xx, util::PhantomLifetime, D3xxError, Device, Result};
 /// This struct is used to perform asynchronous (overlapped) I/O operations.
 /// This struct also implements the [`Future`] trait, so it can be used with
 /// the `async`/`await` Rust syntax.
+///
+/// The lifetime of the `Overlapped` instance is tied to the lifetime of the `Device` instance;
+/// the device cannot be closed while the `Overlapped` instance is in use.
 pub struct Overlapped<'a> {
     handle: ffi::HANDLE,
     overlapped: ffi::_OVERLAPPED,

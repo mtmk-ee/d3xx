@@ -1,9 +1,17 @@
 use crate::Pipe;
 
+const FLAG_BATTERY_CHARGING_ENABLE: u16 = 0b0000_0001;
 const FLAG_NOTIFICATION_ENABLE_PIPE0: u16 = 0b0000_0100;
 const FLAG_UNDERRUN_DISABLE_PIPE0: u16 = 0b0100_0000;
 const FLAG_UNDERRUN_DISABLE: u16 = 0b0000_0010;
 const FLAG_ALL_ENABLED: u16 = 0xFFFF;
+
+const FLAG_CHARGING_MODE_DCP: u8 = 0xC0;
+const FLAG_CHARGING_MODE_CDP: u8 = 0x30;
+const FLAG_CHARGING_MODE_SDP: u8 = 0x0C;
+const OFFSET_CHARGING_MODE_DCP: usize = 6;
+const OFFSET_CHARGING_MODE_CDP: usize = 4;
+const OFFSET_CHARGING_MODE_SDP: usize = 2;
 
 /// Optional features.
 pub struct OptionalFeatures {
@@ -13,14 +21,12 @@ pub struct OptionalFeatures {
 
 impl OptionalFeatures {
     pub(crate) fn new(flags: u16, battery_flags: u8) -> Self {
-        let battery_charging = if flags & 1 == 0 {
-            None
-        } else {
-            Some(BatteryChargingModes(battery_flags))
-        };
         Self {
             flags,
-            battery_charging,
+            battery_charging: match flags & FLAG_BATTERY_CHARGING_ENABLE {
+                0 => None,
+                _ => Some(BatteryChargingModes(battery_flags)),
+            },
         }
     }
 
@@ -84,24 +90,37 @@ impl OptionalFeatures {
 /// This indicates the type of power source the device is connected to.
 /// This is only available for configurations in whichs the GPIO pins are
 /// properly configured.
+///
+/// # Further Reading
+///
+/// See <https://www.analog.com/en/technical-articles/the-basics-of-usb-battery-charging.html>
 pub struct BatteryChargingModes(u8);
 
 impl BatteryChargingModes {
     /// Dedicated charging port (DCP).
+    ///
+    /// This is for USB devices which only support charging, and do not support
+    /// data transfer.
     #[must_use]
     pub fn dcp(&self) -> u8 {
-        (self.0 & 0xC0) >> 6
+        (self.0 & FLAG_CHARGING_MODE_DCP) >> OFFSET_CHARGING_MODE_DCP
     }
 
     /// Charging downstream port (CDP).
+    ///
+    /// This is for USB devices which charge above the normal current limits
+    /// of USB 2.0 and USB 3.0 ports. This is typical for USB devices with
+    /// rechargeable batteries.
     #[must_use]
     pub fn cdp(&self) -> u8 {
-        (self.0 & 0x30) >> 4
+        (self.0 & FLAG_CHARGING_MODE_CDP) >> OFFSET_CHARGING_MODE_CDP
     }
 
     /// Standard downstream port (SDP).
+    ///
+    /// This is for USB device which do not support charging.
     #[must_use]
     pub fn sdp(&self) -> u8 {
-        (self.0 & 0x0C) >> 2
+        (self.0 & FLAG_CHARGING_MODE_SDP) >> OFFSET_CHARGING_MODE_SDP
     }
 }

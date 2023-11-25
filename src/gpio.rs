@@ -125,8 +125,7 @@ pub enum Level {
 
 /// GPIO pull mode.
 ///
-/// There are three modes available:
-///
+/// This can be configured once opening a device.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]
 pub enum PullMode {

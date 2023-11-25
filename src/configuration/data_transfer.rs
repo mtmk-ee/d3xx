@@ -4,7 +4,9 @@ use crate::{D3xxError, Result};
 
 /// Configuration regarding data transfer.
 ///
-/// This configuration contains:
+/// FIFOs are used to transfer data to and from the chip. The data transfer configuration
+/// indicates the behavior of the FIFOs. This configuration contains:
+///
 /// - FIFO clock speed
 /// - FIFO mode
 /// - Channel configuration
@@ -44,6 +46,10 @@ impl DataTransferConfig {
 }
 
 /// FIFO mode.
+///
+/// This mode represents the configuration of the FIFOs on the chip in various modes.
+/// `Mode600` is the default mode, representing the behavior of FT600 FIFOs.
+/// `Mode245` represents the behavior of FT245 FIFOs.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]
 pub enum FifoMode {
@@ -53,7 +59,7 @@ pub enum FifoMode {
     Mode600,
 }
 
-/// FIFO clock speed.
+/// Clock speed of the FIFOs.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]
 pub enum FifoClock {
@@ -64,6 +70,9 @@ pub enum FifoClock {
 }
 
 /// Channel configuration.
+///
+/// A "channel" is a pair of pipes. Each channel has one IN pipe and one OUT pipe,
+/// except for `OneOutPipe` and `OneInPipe`, which have only one pipe.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]
 pub enum ChannelConfiguration {

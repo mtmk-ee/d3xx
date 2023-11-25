@@ -5,7 +5,7 @@ use crate::ffi;
 /// A specialized [`Result`] type alias for D3XX operations.
 ///
 /// See [`D3xxError`] for a list of possible errors, and [`try_d3xx`] for a macro
-/// producing [`Result`]s from D3XX error codes.
+/// producing a [`Result`] from D3XX error codes.
 pub type Result<T, E = D3xxError> = std::result::Result<T, E>;
 
 /// Represents an error returned by the D3XX library.
@@ -137,7 +137,7 @@ impl From<ffi::FT_STATUS> for D3xxError {
 }
 
 impl From<D3xxError> for std::io::Error {
-    /// Allows propagation of D3XX errors as [`std::io::Error`]s.
+    /// Allows propagation of D3XX errors as a [`std::io::Error`].
     ///
     /// This implementation is useful for functions which return [`io::Result<T>`](std::io::Result),
     /// such as the methods found in [`io::Write`](std::io::Write).
@@ -146,7 +146,7 @@ impl From<D3xxError> for std::io::Error {
     }
 }
 
-/// A handy macro for converting D3XX error codes to [`Result<T, D3xxError>`]s.
+/// A macro for converting D3XX error codes to a [`Result<T, D3xxError>`].
 ///
 /// The majority of D3XX functions return an integral status code. This macro
 /// maps the status code to a [`Result<T, D3xxError>`] where `T` is `()`.
@@ -162,15 +162,15 @@ impl From<D3xxError> for std::io::Error {
 /// try_d3xx!(0).unwrap(); // Ok
 /// try_d3xx!(1).unwrap(); // Error!
 /// ```
+#[macro_export]
 macro_rules! try_d3xx {
     ($expr:expr) => {
         match $expr {
             0 => Ok(()),
-            code => Err(crate::error::D3xxError::from(code)),
+            code => Err($crate::error::D3xxError::from(code)),
         }
     };
 }
-pub(crate) use try_d3xx;
 
 #[cfg(test)]
 mod tests {

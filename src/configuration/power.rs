@@ -34,9 +34,9 @@ impl PowerConfig {
         self.flags & FLAG_REMOTE_WAKEUP != 0
     }
 
-    /// Get the maximum power consumption.
+    /// Get the maximum power consumption in milliamps.
     #[must_use]
     pub fn max_power(&self) -> u16 {
-        self.max_power
+        self.max_power * 2 // 2mA units
     }
 }

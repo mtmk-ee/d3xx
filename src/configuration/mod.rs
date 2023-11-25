@@ -14,9 +14,13 @@
 //! - Optional features
 //! - FIFO timing and behavior
 //! - Channel configuration
+//!
+//! # Further Reading
+//!
+//! FTDI provides the [FT60X Configuration Programmer Guide](https://ftdichip.com/wp-content/uploads/2020/07/AN_370-FT60X-Configuration-Programmer-User-Guide.pdf)
+//! which describes the configuration options in detail.
 
 mod data_transfer;
-mod notification;
 mod optional;
 mod pin_drive;
 mod power;
@@ -26,7 +30,6 @@ use std::ptr::addr_of_mut;
 
 use crate::{ffi, try_d3xx, Result};
 pub use data_transfer::*;
-pub use notification::*;
 pub use optional::*;
 pub use pin_drive::*;
 pub use power::*;

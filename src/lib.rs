@@ -1,3 +1,7 @@
+//! Future Technology Devices International (FTDI) produces the FT60X series of chips (e.g. FT601),
+//! which act as Super Speed USB 3.0 to FIFO bridges. FTDI provides a proprietary driver for these chips,
+//! called D3XX, which exposes a low-level API for interacting with the devices through its DLL/shared library.
+//!
 //! This crate provides a safe, idiomatic Rust wrapper around FTDI's D3XX driver API.
 //!
 //! # Disclaimer
@@ -9,7 +13,7 @@
 //!
 //! # What This Crate Does
 //!
-//! This crate provides much of the functionality of the D3XX API, including:
+//! This crate provides near-complete functionality of the D3XX API:
 //! - Device enumeration
 //! - Reading device configurations
 //! - Pipe I/O
@@ -21,11 +25,15 @@
 //! the unsafe FFI functions may be called directly. However, it is recommended to use the
 //! [FT60X Chip Configuration Programmer](https://ftdichip.com/utilities/) instead for this purpose.
 //!
-//! # Background
+//! # Requirements
 //!
-//! Future Technology Devices International (FTDI) produces the FT60X series of chips (e.g. FT601),
-//! which act as SuperSpeed USB 3.0 to FIFO bridges. FTDI provides a proprietary driver for these chips,
-//! called D3XX, which exposes a low-level API for interacting with the devices through its DLL/shared library.
+//! This crate is available for Linux, Windows, and macOS. Although the crate may be build without
+//! it, the [D3XX driver](https://ftdichip.com/drivers/d3xx-drivers/) must be installed for the
+//! target platform in order to communicate with devices.
+//!
+//! Building this crate requires [Clang](https://releases.llvm.org/download.html) to be installed.
+//!
+//! # Background
 //!
 //! ## Brief Refresher on USB 3.0
 //!
@@ -51,7 +59,7 @@
 //!
 //! For example, a keyboard or mouse would use interrupt transfers, while a web camera would use isochronous transfers.
 //!
-//! # D3XX Guarantees
+//! # D3XX Constraints
 //!
 //! The D3XX API does not provide many guarantees about the behavior of the driver. For example, there are
 //! no guarantees about what happens when a device is unplugged during a transfer, or whether any functions
@@ -119,7 +127,6 @@
 //!     .write(&buf)
 //!     .expect("failed to write to pipe");
 //! ```
-
 #![warn(clippy::all, clippy::pedantic, clippy::cargo, missing_docs)]
 // Allow missing error documentation since the D3XX documentation is vague about error conditions.
 #![allow(clippy::missing_errors_doc, clippy::module_name_repetitions)]
@@ -139,7 +146,6 @@ mod scan;
 pub(crate) mod util;
 
 pub use device::Device;
-pub(crate) use error::try_d3xx;
 pub use error::{D3xxError, Result};
 pub use gpio::{Direction, Gpio, GpioPin, Level, PullMode};
 pub use pipe::{Pipe, PipeIo, PipeType};

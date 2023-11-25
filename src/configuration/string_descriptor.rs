@@ -43,7 +43,8 @@ impl StringDescriptor {
     ///
     /// The string will be converted to UTF-16 and truncated to 30 characters
     /// when written to the device.
-    pub fn set_manufacturer(&mut self, manufacturer: &str) {
+    #[allow(unused)]
+    pub(crate) fn set_manufacturer(&mut self, manufacturer: &str) {
         self.manufacturer = manufacturer.to_owned();
     }
 
@@ -57,7 +58,8 @@ impl StringDescriptor {
     ///
     /// The string will be converted to UTF-16 and truncated to 62 characters
     /// when written to the device.
-    pub fn set_product(&mut self, product: &str) {
+    #[allow(unused)]
+    pub(crate) fn set_product(&mut self, product: &str) {
         self.product = product.to_owned();
     }
 
@@ -71,7 +73,8 @@ impl StringDescriptor {
     ///
     /// The string will be converted to UTF-16 and truncated to 30 characters
     /// when written to the device.
-    pub fn set_serial_number(&mut self, serial_number: &str) {
+    #[allow(unused)]
+    pub(crate) fn set_serial_number(&mut self, serial_number: &str) {
         self.serial_number = serial_number.to_owned();
     }
 

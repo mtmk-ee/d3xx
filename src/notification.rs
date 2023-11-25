@@ -55,7 +55,7 @@
 
 use std::ffi::c_void;
 
-use crate::{error::try_d3xx, ffi, D3xxError, Pipe, Result};
+use crate::{ffi, try_d3xx, D3xxError, Pipe, Result};
 
 /// Type alias for notification callback functions.
 ///

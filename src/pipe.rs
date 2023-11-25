@@ -117,7 +117,9 @@ impl<'a> PipeIo<'a> {
     /// There is no guarantee that the device will not send/receive previously-transmitted data
     /// after this method is called.
     ///
-    /// It is recommended to call this method
+    /// The D3XX API documentation recommends that pipes be aborted on write
+    /// failure. This method is transparently called in error cases for the user,
+    /// so it is not typically necessary to do so manually.
     pub fn abort(&self) -> Result<()> {
         try_d3xx!(unsafe { ffi::FT_AbortPipe(self.handle, u8::from(self.id)) })
     }

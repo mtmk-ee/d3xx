@@ -3,6 +3,9 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 use crate::{D3xxError, Result};
 
 /// Drive strength configuration for a GPIO/FIFO.
+///
+/// The drive strength configuration indicates the load driven by the GPIO/FIFO.
+/// This should be appropriately configured to avoid voltage deviation.
 #[derive(IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]
 pub enum DriveStrength {
