@@ -133,6 +133,7 @@
 
 #[cfg(feature = "config")]
 pub mod configuration;
+mod control;
 pub mod descriptor;
 mod device;
 mod error;
