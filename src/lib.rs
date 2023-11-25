@@ -74,11 +74,25 @@
 //! errors in a systematic manner, as the error conditions may change in future versions of the
 //! D3XX API. Instead, it is recommended to use a catch-all approach in most cases.
 //!
+//! ## Global Lock
+//!
+//! One of the consequences of the assumption regarding thread-safety is that some operations
+//! must be performed while holding a lock on the driver. For example, listing devices must be done
+//! with the lock held since the operation consists of a write followed by a read of the driver's
+//! device table, which may by invalidated at any point by another thread.
+//!
+//! The operations which acquire the lock do so transparently by calling
+//! [`with_global_lock`](crate::ffi::with_global_lock). This function is also available for use
+//! by the user if access to the bindings are needed. Care should be taken to avoid deadlocks when
+//! using this function.
 //!
 //! # Further Reading
 //!
 //! It is recommended to read the [D3XX Programmers Guide](https://ftdichip.com/wp-content/uploads/2020/07/AN_379-D3xx-Programmers-Guide-1.pdf)
-//! for more information about the capabilities provided by the D3XX API.
+//! for more information about the capabilities provided by the D3XX API. Some information missing from the
+//! D3XX Programmers Guide can be found in the
+//! [D3XX .NET Programmers Guide](https://ftdichip.com/wp-content/uploads/2020/08/AN_407-D3xx-.NET-Programmers-Guide.pdf)
+//! instead.
 //!
 //! # Simple Example
 //!

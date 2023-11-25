@@ -16,6 +16,9 @@ use crate::{
 /// This struct implements [`Read`] and [`Write`], so it can be used with
 /// the standard library's I/O functions.
 ///
+/// The lifetime of the `PipeIo` instance is tied to the lifetime of the parent `Device` instance;
+/// the device cannot be closed while the `PipeIo` instance is in use.
+///
 /// # Examples
 ///
 /// ```no_run
@@ -47,9 +50,6 @@ pub struct PipeIo<'a> {
 
 impl<'a> PipeIo<'a> {
     /// Create a new `PipeIo` instance using the given device and pipe ID.
-    ///
-    /// The lifetime of the `PipeIo` instance is tied to the lifetime of the `Device` instance;
-    /// the `PipeIo` instance cannot outlive the `Device` instance.
     ///
     /// For improved ergonomics it is recommended to use [`Device::pipe`] instead of this method.
     #[must_use]

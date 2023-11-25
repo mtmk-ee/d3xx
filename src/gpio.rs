@@ -12,19 +12,24 @@ use crate::ffi;
 use crate::util::PhantomLifetime;
 use crate::{try_d3xx, Device, Result};
 
-/// GPIO access.
+/// Provides read/write access to GPIO pins of the chip.
 ///
-/// This struct is used to access the GPIO pins of a [`Device`].
+/// The function of the pins is determined by the chip configuration. As this crate
+/// does not provide a means to configure the chip, it is recommended to use
+/// the [FT60X Chip Configuration Programmer](https://ftdichip.com/utilities/) for
+/// configuration.
+///
+/// The lifetime of the `Gpio` instance is tied to the lifetime of the `Device` instance;
+/// the device cannot be closed while the `Gpio` instance is in use.
 pub struct Gpio<'a> {
     handle: ffi::FT_HANDLE,
     pin: GpioPin,
+    /// Ties the lifetime of this struct to the lifetime of the source [`Device`](crate::Device) instance.
     _lifetime_marker: PhantomLifetime<'a>,
 }
 
 impl<'a> Gpio<'a> {
     /// Create a new `Gpio` instance using the given device and GPIO pin.
-    ///
-    /// The lifetime of the `Gpio` instance is tied to the lifetime of the `Device` instance.
     pub(crate) fn new(device: &'a Device, pin: GpioPin) -> Self {
         Self {
             handle: device.handle(),
@@ -35,7 +40,10 @@ impl<'a> Gpio<'a> {
 
     /// Enable the GPIO in the given direction.
     ///
-    /// Once enabled, the GPIO cannot be disabled.
+    /// The D3XX API does not provide a way to disable GPIO pins.
+    /// However, the direction of the GPIO may be changed at any time, and
+    /// may be set to [`Direction::Input`] to effectively prevent writing
+    /// to the GPIO.
     pub fn enable(&self, direction: Direction) -> Result<()> {
         try_d3xx!(unsafe {
             ffi::FT_EnableGPIO(
@@ -46,7 +54,7 @@ impl<'a> Gpio<'a> {
         })
     }
 
-    /// Set internal GPIO pull resistors.
+    /// Set internal GPIO pull-up/pull-down resistors.
     ///
     /// Only available for Rev. B parts or later.
     pub fn set_pull(&self, pull: PullMode) -> Result<()> {
@@ -70,13 +78,14 @@ impl<'a> Gpio<'a> {
         })
     }
 
-    /// Return the status of the GPIO.
+    /// Read the status of the GPIO.
     #[allow(clippy::missing_panics_doc)]
     pub fn read(&self) -> Result<Level> {
         let mut value: u32 = 0;
         try_d3xx!(unsafe { ffi::FT_ReadGPIO(self.handle, &mut value) })?;
+        let bit = ((value >> u8::from(self.pin)) & 1) as u8;
         // unwrap(): value is guaranteed to be 0 or 1, so there is a matching `Level` variant.
-        Ok(Level::try_from(((value >> u8::from(self.pin)) & 1) as u8).unwrap())
+        Ok(Level::try_from(bit).unwrap())
     }
 }
 
@@ -85,8 +94,12 @@ impl<'a> Gpio<'a> {
 #[repr(u8)]
 pub enum GpioPin {
     /// GPIO pin 0.
+    ///
+    /// This is referred to as GPIO0 in the datasheet.
     Pin0 = 0,
     /// GPIO pin 1.
+    ///
+    /// This is referred to as GPIO1 in the datasheet.
     Pin1 = 1,
 }
 
@@ -111,6 +124,9 @@ pub enum Level {
 }
 
 /// GPIO pull mode.
+///
+/// There are three modes available:
+///
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]
 pub enum PullMode {

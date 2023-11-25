@@ -174,8 +174,8 @@ impl Device {
     /// the chip and its configuration. Some of the information is also available through
     /// the various descriptors.
     #[cfg(feature = "config")]
-    pub fn chip_configuration(&self) -> Result<crate::ChipConfiguration> {
-        crate::ChipConfiguration::new(self.handle)
+    pub fn chip_configuration(&self) -> Result<crate::configuration::ChipConfiguration> {
+        crate::configuration::ChipConfiguration::new(self.handle)
     }
 
     /// Returns a [`Pipe`] for pipe I/O and configuration.

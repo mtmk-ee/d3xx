@@ -1,7 +1,18 @@
 /// Container for the string descriptors of a [`Device`](crate::Device).
 ///
-/// The D3XX API provides access to the string descriptor as a little-endian UTF-16
-/// byte array. This struct provides a more convenient interface.
+/// The D3XX API provides access to the string descriptor as a single
+/// little-endian UTF-16 byte array. This struct provides a more convenient
+/// interface.
+///
+/// # Developers
+///
+/// The descriptors are stored as wide strings in the following order:
+/// - Manufacturer name
+/// - Product name
+/// - Serial number
+///
+/// Each descriptor is prefixed with a header containing the length of the
+/// descriptor (including the header) and the descriptor type.
 pub struct StringDescriptor {
     manufacturer: String,
     product: String,
@@ -9,6 +20,11 @@ pub struct StringDescriptor {
 }
 
 impl StringDescriptor {
+    /// Extract the string descriptors from the given byte array.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the byte array contains any malformed headers.
     pub(crate) fn new(descriptor: [u8; 128]) -> Self {
         Self {
             manufacturer: Self::extract_part(&descriptor, 0),
@@ -59,6 +75,12 @@ impl StringDescriptor {
         self.serial_number = serial_number.to_owned();
     }
 
+    /// Extract a single part of the string descriptor.
+    ///
+    /// # Panics
+    ///
+    /// Panics if any of the headers are malformed or if `index` is
+    /// greater than `2`.
     fn extract_part(descriptors: &[u8], index: usize) -> String {
         const HEADER_SIZE: usize = 2;
         assert!(index < 3);
@@ -75,6 +97,10 @@ impl StringDescriptor {
         String::from_utf16_lossy(&wide_chars)
     }
 
+    /// Convert this struct back into a byte array suitable for writing to the device.
+    ///
+    /// This is currently unused, but may be useful in the future.
+    #[allow(unused)]
     pub(crate) fn as_ffi_descriptor(&self) -> [u8; 128] {
         fn set_part(slice: &mut [u8], s: &[u8]) {
             // unwrap is safe because the length of the string is always <= 62
