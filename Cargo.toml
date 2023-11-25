@@ -20,3 +20,4 @@ thiserror = "1.0.49"
 [features]
 static = ["libftd3xx-ffi/static"]
 config = []
+default = ["config"]
