@@ -1,16 +1,15 @@
 [package]
 name = "d3xx"
 version = "0.0.1"
-edition = "2021"
 authors = ["Mitchell Matsumori-Kelly"]
-
 categories = ["api-bindings", "hardware-support"]
 description = "Rust bindings for the FTDI D3XX library"
+edition = "2021"
 keywords = ["ftdi", "d3xx", "usb", "ft60x"]
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/mtmk-ee/d3xx"
-homepage = "https://github.com/mtmk-ee/d3xx"
+rust-version = "1.56.0"
 
 [dependencies]
 libftd3xx-ffi = { version = "0.0.2", features = ["bindgen"] }
@@ -20,4 +19,4 @@ thiserror = "1.0.49"
 [features]
 static = ["libftd3xx-ffi/static"]
 config = []
-default = ["config"]
+default = []
