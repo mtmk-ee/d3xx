@@ -1,5 +1,3 @@
-use std::ffi::{c_uint, c_ulong};
-
 use crate::{
     ffi::{self, with_global_lock},
     try_d3xx, Device, Result,
@@ -194,7 +192,7 @@ pub fn list_devices() -> Result<Vec<DeviceInfo>> {
         // This should not happen in practice if the practice of acquiring the global lock
         // is adhered to.
         let buf_capacity = create_device_info_list()?;
-        let mut table_len: c_uint = 0;
+        let mut table_len: ffi::DWORD = 0;
         let mut devices: Vec<ffi::FT_DEVICE_LIST_INFO_NODE> = Vec::with_capacity(buf_capacity);
         try_d3xx!(unsafe {
             ffi::FT_GetDeviceInfoList(devices.as_mut_ptr(), std::ptr::addr_of_mut!(table_len))
@@ -217,7 +215,7 @@ pub fn list_devices() -> Result<Vec<DeviceInfo>> {
 /// Note: the underlying device table does not automatically update; it
 /// must be refreshed when needed by calling this function again.
 fn create_device_info_list() -> Result<usize> {
-    let mut num_devices: c_ulong = 0;
+    let mut num_devices: ffi::DWORD = 0;
     try_d3xx!(unsafe { ffi::FT_CreateDeviceInfoList(&mut num_devices) })?;
     Ok(num_devices as usize)
 }

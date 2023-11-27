@@ -1,5 +1,4 @@
 use std::{
-    ffi::c_uchar,
     io::{Read, Write},
     marker::PhantomData,
 };
@@ -71,10 +70,15 @@ impl<'a> PipeIo<'a> {
     pub fn descriptor(&self) -> Result<PipeInfo> {
         // FT60x devices have 2 interfaces, and 0 is reserved.
         // Page 33: https://ftdichip.com/wp-content/uploads/2020/07/AN_379-D3xx-Programmers-Guide-1.pdf
-        const INTERFACE_INDEX: c_uchar = 1;
+        const INTERFACE_INDEX: ffi::UCHAR = 1;
         let mut info = ffi::FT_PIPE_INFORMATION::default();
         try_d3xx!(unsafe {
-            ffi::FT_GetPipeInformation(self.handle, INTERFACE_INDEX, u8::from(self.id), &mut info)
+            ffi::FT_GetPipeInformation(
+                self.handle,
+                INTERFACE_INDEX,
+                ffi::UCHAR::from(self.id),
+                &mut info,
+            )
         })?;
         PipeInfo::new(info)
     }
@@ -87,14 +91,19 @@ impl<'a> PipeIo<'a> {
     /// Stream pipes are general-purpose pipes supporting interrupt, bulk,
     /// and isochronous transfers.
     pub fn set_stream_size(&self, size: Option<usize>) -> Result<()> {
+        #[cfg(windows)]
+        type Bool = ffi::BOOLEAN;
+        #[cfg(not(windows))]
+        type Bool = ffi::BOOL;
+
         match size {
             Some(size) => {
                 try_d3xx!(unsafe {
                     ffi::FT_SetStreamPipe(
                         self.handle,
-                        c_uchar::from(false),
-                        c_uchar::from(false),
-                        self.id as c_uchar,
+                        Bool::from(false),
+                        Bool::from(false),
+                        self.id as ffi::UCHAR,
                         size.try_into().or(Err(D3xxError::InvalidArgs))?,
                     )
                 })
@@ -103,9 +112,9 @@ impl<'a> PipeIo<'a> {
                 try_d3xx!(unsafe {
                     ffi::FT_ClearStreamPipe(
                         self.handle,
-                        c_uchar::from(false),
-                        c_uchar::from(false),
-                        self.id as c_uchar,
+                        Bool::from(false),
+                        Bool::from(false),
+                        self.id as ffi::UCHAR,
                     )
                 })
             }
@@ -138,6 +147,9 @@ impl<'a> PipeIo<'a> {
     }
 
     /// Get the timeout in milliseconds for the specified pipe.
+    ///
+    /// This method is only available on Windows.
+    #[cfg(windows)]
     pub fn timeout(&self) -> Result<u32> {
         let mut timeout = 0;
         try_d3xx!(unsafe { ffi::FT_GetPipeTimeout(self.handle, u8::from(self.id), &mut timeout) })?;
