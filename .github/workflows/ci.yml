@@ -1,4 +1,4 @@
-name: Release
+name: CI
 on:
   pull_request:
   push:
@@ -11,6 +11,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
         rust: [nightly, beta, stable, 1.56.0]
+      fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
