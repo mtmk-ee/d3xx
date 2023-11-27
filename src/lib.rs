@@ -2,13 +2,13 @@
 //! which act as Super Speed USB 3.0 to FIFO bridges. FTDI provides a proprietary driver for these chips,
 //! called D3XX, which exposes a low-level API for interacting with the devices through its DLL/shared library.
 //!
-//! This crate provides a safe, idiomatic Rust wrapper around FTDI's D3XX driver API.
+//! This crate provides a safe, idiomatic Rust wrapper around FTDI's D3XX library.
 //!
 //! # Disclaimer
 //!
 //! This crate is unofficial and is not affiliated with FTDI in any way.
 //!
-//! The crate is still in early development and is not yet ready for production use.
+//! The crate is still in early development and is unstable/experimental.
 //! Feedback and contributions are welcome!
 //!
 //! # What This Crate Does
@@ -33,11 +33,9 @@
 //!
 //! Building this crate requires [Clang](https://releases.llvm.org/download.html) to be installed.
 //!
+//!
 //! # Background
 //!
-//! ## Brief Refresher on USB 3.0
-//!
-//! ### Terminology
 //! USB peripherals contain a series of numbered endpoints, which are essentially physical data buffers. Each endpoint may contain
 //! one or two buffers, corresponding to the direction of data flow (IN or OUT). D3XX devices have 8 endpoints, 4 each for IN and OUT transfers.
 //! The software representation of an endpoint is known as a "pipe" and is unidirectional.
@@ -45,7 +43,8 @@
 //! Endpoints are collected into "interfaces", which are logical groupings of endpoints that serve a common purpose.
 //! These interfaces are then collected into "configurations", which are collections of interfaces that represent
 //! a complete set of functionality for the device. A device may have multiple configurations, but only one may be active
-//! at a time.
+//! at a time. D3XX offers a means of communicating with devices, primarily through the software equivalent of endpoints
+//! known as "pipes."
 //!
 //! ### Transfers
 //!

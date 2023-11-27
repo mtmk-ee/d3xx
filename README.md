@@ -2,7 +2,7 @@ Future Technology Devices International (FTDI) produces the FT60X series of chip
 which act as Super Speed USB 3.0 to FIFO bridges. FTDI provides a proprietary driver for these chips,
 called D3XX, which exposes a low-level API for interacting with the devices through its DLL/shared library.
 
-This crate provides a safe, idiomatic Rust wrapper around FTDI's D3XX driver API.
+This crate provides a safe, idiomatic Rust wrapper around FTDI's D3XX library.
 
 # Disclaimer
 
