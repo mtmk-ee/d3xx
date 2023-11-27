@@ -8,12 +8,12 @@ This crate provides a safe, idiomatic Rust wrapper around FTDI's D3XX driver API
 
 This crate is unofficial and is not affiliated with FTDI in any way.
 
-The crate is still in early development and is not yet ready for production use.
+The crate is still in early development and is unstable/experimental.
 Feedback and contributions are welcome!
 
 # What This Crate Does
 
-This crate provides near-complete functionality of the D3XX API:
+This crate provides near-complete functionality of the D3XX library:
 - Device enumeration
 - Reading device configurations
 - Pipe I/O
@@ -35,9 +35,6 @@ Building this crate requires [Clang](https://releases.llvm.org/download.html) to
 
 # Background
 
-## Brief Refresher on USB 3.0
-
-### Terminology
 USB peripherals contain a series of numbered endpoints, which are essentially physical data buffers. Each endpoint may contain
 one or two buffers, corresponding to the direction of data flow (IN or OUT). D3XX devices have 8 endpoints, 4 each for IN and OUT transfers.
 The software representation of an endpoint is known as a "pipe" and is unidirectional.
@@ -45,19 +42,8 @@ The software representation of an endpoint is known as a "pipe" and is unidirect
 Endpoints are collected into "interfaces", which are logical groupings of endpoints that serve a common purpose.
 These interfaces are then collected into "configurations", which are collections of interfaces that represent
 a complete set of functionality for the device. A device may have multiple configurations, but only one may be active
-at a time.
-
-### Transfers
-
-Data is transferred to and from the device in packets called "transactions". There are four types of transfers
-that can be performed:
-
-- Control transfers: mainly used for configuration and identification by the host.
-- Bulk transfers: used for large data transfers where correctness is prioritized over throughput.
-- Isochronous transfers: used for streaming data where throughput is prioritized over correctness.
-- Interrupt transfers: used for small data transfers that require low latency.
-
-For example, a keyboard or mouse would use interrupt transfers, while a web camera would use isochronous transfers.
+at a time. D3XX offers a means of communicating with devices, primarily through the software equivalent of endpoints
+known as "pipes."
 
 # D3XX Constraints
 
@@ -67,7 +53,7 @@ are thread-safe. Because many aspects of the D3XX API are not explicitly defined
 intentionally puts in place additional restrictions and assumptions to ensure it is safe to use.
 The two main assumptions with the greatest consequence on the design of this crate are:
 
-1. The driver is not thread-safe nor reentrant.
+1. The driver is not thread-safe.
 2. Any error can occur at any time for any reason.
 
 Because of the lack of a clear standard, it is *not recommended* to use this crate in safety-critical applications.
