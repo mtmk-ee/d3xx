@@ -23,7 +23,7 @@ use crate::{ffi, try_d3xx, util::PhantomLifetime, D3xxError, Device, Result};
 /// the device cannot be closed while the `Overlapped` instance is in use.
 pub struct Overlapped<'a> {
     handle: ffi::HANDLE,
-    overlapped: ffi::_OVERLAPPED,
+    inner: ffi::_OVERLAPPED,
     /// Ties the lifetime of this struct to the lifetime of the source [`Device`](crate::Device) instance.
     _lifetime_constraint: PhantomLifetime<'a>,
 }
@@ -53,7 +53,7 @@ impl<'a> Overlapped<'a> {
         let overlapped = unsafe { overlapped.assume_init() };
         Ok(Self {
             handle,
-            overlapped,
+            inner: overlapped,
             _lifetime_constraint: PhantomData,
         })
     }
@@ -66,7 +66,7 @@ impl<'a> Overlapped<'a> {
     #[must_use]
     #[allow(unused)]
     pub fn inner(&self) -> &ffi::_OVERLAPPED {
-        &self.overlapped
+        &self.inner
     }
 
     /// Get a mutable reference to the underlying `FT_OVERLAPPED` structure.
@@ -75,7 +75,7 @@ impl<'a> Overlapped<'a> {
     #[inline]
     #[must_use]
     pub fn inner_mut(&mut self) -> &mut ffi::_OVERLAPPED {
-        &mut self.overlapped
+        &mut self.inner
     }
 
     /// Poll the overlapped operation once.

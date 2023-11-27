@@ -140,9 +140,6 @@ pub enum NotificationData {
         /// The state of GPIO1.
         gpio1: usize,
     },
-    /// Interrupt notification. This variant is undocumented and only
-    /// available on Linux platforms.
-    Interrupt,
 }
 
 /// Set a notification callback.
@@ -270,8 +267,6 @@ unsafe fn extract_notification_data(
             Ok(extract_gpio_variant(callback_info))
         }
         #[cfg(not(windows))]
-        ffi::E_FT_NOTIFICATION_CALLBACK_TYPE::E_FT_NOTIFICATION_CALLBACK_TYPE_INTERRUPT => {
-            Ok(NotificationData::Interrupt)
-        }
+        _ => Err(D3xxError::OtherError),
     }
 }
