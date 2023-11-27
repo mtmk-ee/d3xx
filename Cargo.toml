@@ -1,6 +1,6 @@
 [package]
 name = "d3xx"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["Mitchell Matsumori-Kelly"]
 categories = ["api-bindings", "hardware-support"]
 description = "Rust bindings for the FTDI D3XX library"
