@@ -9,7 +9,7 @@ keywords = ["ftdi", "d3xx", "usb", "ft60x"]
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/mtmk-ee/d3xx"
-rust-version = "1.56.0"
+rust-version = "1.58.0"
 
 [dependencies]
 libftd3xx-ffi = { version = "0.0.2", features = [] }
