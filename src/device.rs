@@ -8,7 +8,7 @@ use std::{
 
 use crate::{
     descriptor::{ConfigurationDescriptor, DeviceDescriptor, InterfaceDescriptor},
-    ffi,
+    ffi::{self, with_global_lock},
     gpio::{Gpio, GpioPin},
     notification::{clear_notification_callback, set_notification_callback, Notification},
     try_d3xx,
@@ -87,15 +87,20 @@ impl Device {
     ///
     /// Panics if `serial_number` contains an internal null byte.
     pub fn open(serial_number: &str) -> Result<Self> {
-        let serial_cstr = CString::new(serial_number).expect("failed to create CString");
-        let mut handle: ffi::FT_HANDLE = std::ptr::null_mut();
-        try_d3xx!(unsafe {
-            ffi::FT_Create(
-                serial_cstr.as_ptr() as *mut c_void,
-                ffi::FT_OPEN_BY_SERIAL_NUMBER,
-                &mut handle,
-            )
+        let serial_cstr =
+            CString::new(serial_number).expect("serial number is not a valid C string");
+        let handle = with_global_lock(|| {
+            let mut handle: ffi::FT_HANDLE = std::ptr::null_mut();
+            try_d3xx!(unsafe {
+                ffi::FT_Create(
+                    serial_cstr.as_ptr() as *mut c_void,
+                    ffi::FT_OPEN_BY_SERIAL_NUMBER,
+                    &mut handle,
+                )
+            })
+            .and(Ok(handle))
         })?;
+
         if handle.is_null() {
             Err(crate::D3xxError::DeviceNotFound)
         } else {
