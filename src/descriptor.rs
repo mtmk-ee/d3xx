@@ -56,8 +56,6 @@ impl DeviceDescriptor {
         // The device descriptor has a particular format, so we can perform a sanity check here
         // to avoid reading from potentially invalid memory.
         // See pg. 5: https://ftdichip.com/wp-content/uploads/2020/08/TN_113_Simplified-Description-of-USB-Device-Enumeration.pdf
-        debug_assert_eq!(inner.bLength, 18);
-        debug_assert_eq!(inner.bDescriptorType, 1);
         Ok(Self {
             inner,
             serial_number: descriptor_string(handle, inner.iSerialNumber)?,
@@ -155,9 +153,6 @@ impl InterfaceDescriptor {
         // to avoid reading from potentially invalid memory.
         //
         // See pg. 8: https://ftdichip.com/wp-content/uploads/2020/08/TN_113_Simplified-Description-of-USB-Device-Enumeration.pdf
-        debug_assert_eq!(inner.bLength, 9);
-        debug_assert_eq!(inner.bDescriptorType, 4);
-        debug_assert_eq!(inner.bInterfaceNumber, index);
         Ok(Self {
             inner,
             description: descriptor_string(handle, inner.iInterface)?,
@@ -239,8 +234,6 @@ impl ConfigurationDescriptor {
         let mut inner = ffi::FT_CONFIGURATION_DESCRIPTOR::default();
         try_d3xx!(unsafe { ffi::FT_GetConfigurationDescriptor(handle, addr_of_mut!(inner)) })?;
         // See pg. 7: https://ftdichip.com/wp-content/uploads/2020/08/TN_113_Simplified-Description-of-USB-Device-Enumeration.pdf
-        debug_assert_eq!(inner.bLength, 9);
-        debug_assert_eq!(inner.bDescriptorType, 2);
         Ok(Self {
             inner,
             description: descriptor_string(handle, inner.iConfiguration)?,

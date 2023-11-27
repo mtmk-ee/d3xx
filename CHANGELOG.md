@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## Changed
+
+- Removed debug assertions in `descriptor.rs`
+
 ### Fixed
 
 - `with_global_lock` added to `Device::open`.
