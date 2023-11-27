@@ -19,11 +19,7 @@
 //! - <https://www.keil.com/pack/doc/mw/USB/html/_u_s_b__descriptors.html>
 //! - <https://ftdichip.com/wp-content/uploads/2020/08/TN_113_Simplified-Description-of-USB-Device-Enumeration.pdf>
 
-use std::{
-    ffi::{c_uchar, OsString},
-    os::windows::prelude::OsStringExt,
-    ptr::addr_of_mut,
-};
+use std::ptr::addr_of_mut;
 
 use crate::{ffi, try_d3xx, D3xxError, Pipe, PipeType, Result};
 
@@ -152,7 +148,7 @@ impl InterfaceDescriptor {
     /// Panics in debug builds if the descriptor returned by the driver is invalid.
     /// This is intended for debugging purposes, and the behavior is likely to change
     /// in the future.
-    pub(crate) fn new(handle: ffi::FT_HANDLE, index: c_uchar) -> Result<Self> {
+    pub(crate) fn new(handle: ffi::FT_HANDLE, index: u8) -> Result<Self> {
         let mut inner = ffi::FT_INTERFACE_DESCRIPTOR::default();
         try_d3xx!(unsafe { ffi::FT_GetInterfaceDescriptor(handle, index, addr_of_mut!(inner)) })?;
         // The device descriptor has a particular format, so we can perform a sanity check here
@@ -415,12 +411,12 @@ impl ClassCodes {
 ///
 /// It is important that `index` is valid, as unknown behavior may occur from
 /// attempting to read past the end of the descriptor table.
-fn descriptor_string(handle: ffi::FT_HANDLE, index: c_uchar) -> Result<String> {
+fn descriptor_string(handle: ffi::FT_HANDLE, index: u8) -> Result<String> {
     let mut descriptor = ffi::FT_STRING_DESCRIPTOR::default();
     try_d3xx!(unsafe { ffi::FT_GetStringDescriptor(handle, index, addr_of_mut!(descriptor)) })?;
-    Ok(OsString::from_wide(&descriptor.szString)
-        .to_string_lossy()
-        .into_owned())
+    Ok(widestring::U16CStr::from_slice(&descriptor.szString)
+        .or(Err(D3xxError::OtherError))?
+        .to_string_lossy())
 }
 
 #[cfg(test)]

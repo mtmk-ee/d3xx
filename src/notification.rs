@@ -136,10 +136,13 @@ pub enum NotificationData {
     /// what the data in this variant represents.
     Gpio {
         /// The state of GPIO0.
-        gpio0: i32,
+        gpio0: usize,
         /// The state of GPIO1.
-        gpio1: i32,
+        gpio1: usize,
     },
+    /// Interrupt notification. This variant is undocumented and only
+    /// available on Linux platforms.
+    Interrupt,
 }
 
 /// Set a notification callback.
@@ -252,9 +255,10 @@ unsafe fn extract_notification_data(
     fn extract_gpio_variant(callback_info: *mut c_void) -> NotificationData {
         let callback_info =
             unsafe { *callback_info.cast::<ffi::FT_NOTIFICATION_CALLBACK_INFO_GPIO>() };
+        #[allow(clippy::cast_sign_loss)]
         NotificationData::Gpio {
-            gpio0: callback_info.bGPIO0,
-            gpio1: callback_info.bGPIO1,
+            gpio0: callback_info.bGPIO0 as usize,
+            gpio1: callback_info.bGPIO1 as usize,
         }
     }
 
@@ -264,6 +268,10 @@ unsafe fn extract_notification_data(
         }
         ffi::E_FT_NOTIFICATION_CALLBACK_TYPE::E_FT_NOTIFICATION_CALLBACK_TYPE_GPIO => {
             Ok(extract_gpio_variant(callback_info))
+        }
+        #[cfg(not(windows))]
+        ffi::E_FT_NOTIFICATION_CALLBACK_TYPE::E_FT_NOTIFICATION_CALLBACK_TYPE_INTERRUPT => {
+            Ok(NotificationData::Interrupt)
         }
     }
 }

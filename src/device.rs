@@ -244,6 +244,7 @@ impl Device {
     /// Selective suspend is a power-saving feature that allows the host to power-down
     /// individual USB devices if no I/O requests have been made for a certain period
     /// of time. The device will be powered-up when an I/O request is made.
+    #[cfg(windows)]
     pub fn suspend_timeout(&self) -> Result<u32> {
         let mut timeout: u32 = 0;
         try_d3xx!(unsafe { ffi::FT_GetSuspendTimeout(self.handle, addr_of_mut!(timeout)) })?;
@@ -258,6 +259,7 @@ impl Device {
     /// Selective suspend is a power-saving feature that allows the host to power-down
     /// individual USB devices if no I/O requests have been made for a certain period
     /// of time. The device will be powered-up when an I/O request is made.
+    #[cfg(windows)]
     pub fn set_suspend_timeout(&self, timeout: Option<u32>) -> Result<()> {
         let timeout = timeout.unwrap_or(0);
         try_d3xx!(unsafe { ffi::FT_SetSuspendTimeout(self.handle, timeout) })?;

@@ -9,7 +9,7 @@
 /// 1. Create an `Overlapped` instance with [`Overlapped::new`].
 /// 2. Perform the read/write operation in overlapped mode.
 /// 3. Poll the `Overlapped` instance until the transfer is complete.
-use std::{ffi::c_ulong, future::Future, marker::PhantomData, mem::MaybeUninit};
+use std::{future::Future, marker::PhantomData, mem::MaybeUninit};
 
 use crate::{ffi, try_d3xx, util::PhantomLifetime, D3xxError, Device, Result};
 
@@ -86,13 +86,13 @@ impl<'a> Overlapped<'a> {
     ///
     /// If the operation is complete then the number of bytes transferred is returned.
     fn poll_once(&mut self, wait: bool) -> Result<usize> {
-        let mut transferred: c_ulong = 0;
+        let mut transferred: ffi::ULONG = 0;
         try_d3xx!(unsafe {
             ffi::FT_GetOverlappedResult(
                 self.handle,
                 self.inner_mut(),
                 std::ptr::addr_of_mut!(transferred),
-                i32::from(wait),
+                ffi::BOOL::from(wait),
             )
         })?;
         Ok(transferred as usize)
