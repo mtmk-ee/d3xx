@@ -53,16 +53,12 @@
 //!     .set_notification_callback(callback, Some(device.clone()))
 //!     .unwrap();
 
-use std::ffi::c_void;
+use std::{
+    ffi::c_void,
+    panic::{AssertUnwindSafe, UnwindSafe},
+};
 
 use crate::{ffi, try_d3xx, D3xxError, Pipe, Result};
-
-/// Type alias for notification callback functions.
-///
-/// A notification callback is a function that takes a [`Notification<T>`] as its only argument.
-///
-/// See [`Notification`] for more information and safety tips.
-pub type NotificationCallback<T> = dyn Fn(Notification<T>) + 'static;
 
 /// Information regarding a notification sent by a device.
 ///
@@ -75,26 +71,17 @@ pub type NotificationCallback<T> = dyn Fn(Notification<T>) + 'static;
 /// Any type can be used as the context as long as it is `Sync`. This constraint is necessary
 /// because the callback is not guaranteed to be called on the same thread as the one that set
 /// the callback, and because unwinding across the FFI boundary is undefined behavior.
-///
-/// It is also highly discouraged to panic in the callback, as this will cause the panic to be
-/// propagated across the FFI boundary and back to the D3XX library. This is undefined behavior
-/// and may cause crashes or a number of other wonderful things. This may be changed in the
-/// future ([issue](https://github.com/mtmk-ee/d3xx/issues/4))
-pub struct Notification<'a, T: Sync> {
-    /// The context provided by the user when setting the callback.
-    ///
-    /// The type inside the `Option` is a reference to the context
-    /// because the context is owned by the driver.
-    context: Option<&'a T>,
+pub struct Notification<T: Sync + UnwindSafe> {
+    context: *const T,
     /// The notification data.
     data: NotificationData,
 }
 
-impl<T: Sync> Notification<'_, T> {
+impl<T: Sync + UnwindSafe> Notification<T> {
     /// Get the context associated with this notification.
     #[must_use]
-    pub fn context(&self) -> Option<&T> {
-        self.context
+    pub fn context(&self) -> Option<&'static T> {
+        unsafe { self.context.as_ref() }
     }
 
     /// Get the notification data.
@@ -104,17 +91,45 @@ impl<T: Sync> Notification<'_, T> {
     }
 }
 
+impl<T: Sync + UnwindSafe> UnwindSafe for Notification<T> {}
+
 /// Notification callback context used internally.
 ///
 /// This struct is used to provide [`trampoline`] with the necessary information to call the
 /// user-provided callback. It allows users to set closures as callbacks, as well as use
 /// arbitrary types as context. Otherwise, a rigid API using function pointers would be
 /// required.
-struct InternalContext<T: Sync> {
-    /// The user-provided callback.
-    callback: Box<NotificationCallback<T>>,
-    /// The context provided by the user when setting the callback.
+struct InternalContext<T, F>
+where
+    T: Sync + UnwindSafe,
+    F: Fn(Notification<T>) + UnwindSafe,
+{
+    callback: F,
     context: Option<T>,
+}
+
+impl<T, F> InternalContext<T, F>
+where
+    T: Sync + UnwindSafe,
+    F: Fn(Notification<T>) + UnwindSafe,
+{
+    fn context_ptr(&self) -> *const T {
+        match &self.context {
+            Some(context) => context as *const T,
+            None => std::ptr::null(),
+        }
+    }
+
+    fn callback(&self) -> &F {
+        &self.callback
+    }
+}
+
+impl<T, F> UnwindSafe for InternalContext<T, F>
+where
+    T: Sync + UnwindSafe,
+    F: Fn(Notification<T>) + UnwindSafe,
+{
 }
 
 /// Data associated with a [`Notification`].
@@ -156,24 +171,22 @@ pub enum NotificationData {
 /// memory is released when the callback is cleared/changed. Until this is confirmed, it is
 /// recommended to only set the callback smaller number of times, and with a `T` that is small
 /// enough to not cause memory issues.
-pub(crate) fn set_notification_callback<F, T: Sync>(
+pub(crate) fn set_notification_callback<F, T>(
     handle: ffi::HANDLE,
     callback: F,
     context: Option<T>,
 ) -> Result<()>
 where
-    F: Fn(Notification<T>) + 'static,
+    T: Sync + UnwindSafe,
+    F: Fn(Notification<T>) + UnwindSafe,
 {
     // TODO: determine whether the memory is freed when the callback is changed.
     // If it isn't, we can store a pointer to the context in the device and free it with a
     // destructor closure when the notification callback is changes or when the
     // device is closed.
-    let internal_context = Box::into_raw(Box::new(InternalContext {
-        callback: Box::new(callback),
-        context,
-    }));
+    let internal_context = Box::into_raw(Box::new(InternalContext { callback, context }));
     try_d3xx!(unsafe {
-        ffi::FT_SetNotificationCallback(handle, Some(trampoline::<T>), internal_context.cast())
+        ffi::FT_SetNotificationCallback(handle, Some(trampoline::<T, F>), internal_context.cast())
     })
 }
 
@@ -209,23 +222,22 @@ pub(crate) unsafe fn clear_notification_callback(handle: ffi::HANDLE) {
 ///
 /// - `callback_context` is a valid pointer to an [`InternalContext<T>`] and `T` is correct.
 /// - `callback_info` matches the corresponding `callback_type`.
-///
-/// Additionally, care should be taken to avoid panicking in the callback function as unwinding
-/// across the FFI boundary is undefined behavior.
-unsafe extern "C" fn trampoline<T: Sync>(
+unsafe extern "C" fn trampoline<T: Sync + UnwindSafe, F: Fn(Notification<T>) + UnwindSafe>(
     callback_context: *mut c_void,
     callback_type: ffi::E_FT_NOTIFICATION_CALLBACK_TYPE,
     callback_info: *mut c_void,
 ) {
     let data = extract_notification_data(callback_type, callback_info);
     if let Ok(data) = data {
-        let context = &*(callback_context as *const InternalContext<T>);
+        let context = &*(callback_context as *const InternalContext<T, F>);
+        let callback = AssertUnwindSafe(context.callback());
         let notification = Notification {
-            context: context.context.as_ref(),
+            context: context.context_ptr(),
             data,
         };
-
-        (context.callback)(notification);
+        if let Err(e) = std::panic::catch_unwind(|| callback(notification)) {
+            eprintln!("notification callback panicked: {e:?}");
+        }
     };
 }
 
