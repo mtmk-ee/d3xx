@@ -3,6 +3,7 @@ use std::{
     fmt::Debug,
     marker::PhantomData,
     mem::ManuallyDrop,
+    panic::UnwindSafe,
     ptr::addr_of_mut,
 };
 
@@ -282,11 +283,10 @@ impl Device {
     /// See the [`notification`](crate::notification) module for more information and
     /// an example.
     ///
-    /// # Safety
+    /// # Closure Panics
     ///
-    /// It is critical that the callback does not panic, as the callback is invoked through
-    /// the driver and unwinding across the FFI boundary is not protected. This issue
-    /// will be fixed in the future ([issue](https://github.com/mtmk-ee/d3xx/issues/4)).
+    /// If the closure panics it will be caught and printed to stderr. It is still recommended
+    /// to avoid panicking in the closure if possible.
     ///
     /// # Memory Leaks
     ///
@@ -301,8 +301,8 @@ impl Device {
     /// <https://ftdichip.com/wp-content/uploads/2020/07/AN_379-D3xx-Programmers-Guide-1.pdf>
     pub fn set_notification_callback<F, T>(&self, callback: F, context: Option<T>) -> Result<()>
     where
-        T: Sync,
-        F: Fn(Notification<T>) + 'static,
+        T: Sync + UnwindSafe,
+        F: Fn(Notification<T>) + UnwindSafe,
     {
         set_notification_callback(self.handle, callback, context)
     }
